@@ -1,0 +1,14 @@
+{
+  // Enforce LF in VS Code for all contributors
+  "files.eol": "\n",
+  // Trim trailing whitespace and ensure consistent indentation detection is off so editorconfig or project rules apply
+  "files.trimTrailingWhitespace": true,
+  "editor.detectIndentation": false,
+  // Use Prettier as the default formatter and format on save
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  // Run source fixes (ESLint) on save as well
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "always"
+  }
+}
