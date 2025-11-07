@@ -3,7 +3,7 @@
 import React from 'react';
 import { FiSearch } from 'react-icons/fi';
 
-interface SearchInputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+type SearchInputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 export default function SearchInput({
   value,

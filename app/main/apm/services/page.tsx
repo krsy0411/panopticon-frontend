@@ -1,7 +1,15 @@
+'use client';
+
 import Table from '@/components/ui/Table';
 import DatabaseIcon from '@/components/icons/service/Database';
 import FrontendIcon from '@/components/icons/service/Frontend';
 import ApiIcon from '@/components/icons/service/Api';
+import { SelectDate } from '@/components/common/SelectDate';
+import ViewModeSelectBox from './components/ViewModeSelectBox';
+import PageSizeSelect from './components/PageSizeSelect';
+import Pagination from './components/Pagination';
+import { useState } from 'react';
+import SearchInput from '@/components/ui/SearchInput';
 
 type ServiceType = 'DB' | 'Frontend' | 'API';
 
@@ -51,6 +59,10 @@ const services: Service[] = [
 ];
 
 export default function ServicesPage() {
+  const [viewType, setViewType] = useState<'list' | 'map'>('list');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // 서비스 타입별 아이콘 렌더링 함수
   const renderServiceIcon = (type: ServiceType) => {
     switch (type) {
@@ -69,6 +81,7 @@ export default function ServicesPage() {
     {
       key: 'type' as keyof Service,
       header: 'Type',
+      width: '12%',
       render: (_value: Service[keyof Service], row: Service) => (
         <div className="flex items-center gap-2">
           {renderServiceIcon(row.type)}
@@ -79,15 +92,18 @@ export default function ServicesPage() {
     {
       key: 'name' as keyof Service,
       header: 'Name',
+      width: '40%',
     },
     {
       key: 'requests' as keyof Service,
       header: 'Requests',
+      width: '12%',
       render: (value: Service[keyof Service]) => (value as number).toLocaleString(),
     },
     {
       key: 'errorRate' as keyof Service,
       header: 'Error Rate',
+      width: '12%',
       render: (value: Service[keyof Service]) => (
         <span className={(value as number) > 2 ? 'text-red-600 font-semibold' : ''}>
           {value as number}%
@@ -97,11 +113,13 @@ export default function ServicesPage() {
     {
       key: 'p95Latency' as keyof Service,
       header: 'P95 Latency',
+      width: '12%',
       render: (value: Service[keyof Service]) => <span>{value as number}ms</span>,
     },
     {
       key: 'issues' as keyof Service,
       header: 'Issues',
+      width: '12%',
       render: (value: Service[keyof Service]) => {
         const issueCount = value as number;
         return (
@@ -117,10 +135,41 @@ export default function ServicesPage() {
     },
   ];
 
+  // 페이징 계산
+  const total = services.length;
+  const totalPages = Math.ceil(total / pageSize);
+  const pagedData = services.slice((page - 1) * pageSize, page * pageSize);
+
+  // 페이지 변경 핸들러
+  const handlePrev = () => setPage((p) => Math.max(1, p - 1));
+  const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
+
   return (
-    <div className="p-6">
+    <>
       <h1 className="text-2xl font-bold mb-6">서비스 목록</h1>
-      <Table<Service> columns={columns} data={services} />
-    </div>
+
+      <SearchInput placeholder="서비스 검색..." className="mb-4 w-80 h-10" />
+
+      <div className="flex justify-start items-center mb-2 gap-3">
+        <SelectDate />
+        <ViewModeSelectBox selected={viewType} onSelect={setViewType} />
+        <PageSizeSelect
+          value={pageSize}
+          onChange={(v) => {
+            setPageSize(v);
+            setPage(1);
+          }}
+        />
+      </div>
+
+      {viewType === 'list' ? (
+        <>
+          <Table<Service> columns={columns} data={pagedData} />
+          <Pagination page={page} totalPages={totalPages} onPrev={handlePrev} onNext={handleNext} />
+        </>
+      ) : (
+        <div>맵 뷰 구현 예정...</div>
+      )}
+    </>
   );
 }
