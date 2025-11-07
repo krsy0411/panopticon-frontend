@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/BaseButton';
-import FeatureCard from '@/components/FeatureCard';
+import FeatureCard from '@/components/ui/FeatureCard';
 import Logo from '@/components/icons/Logo';
 import ArrowRight from '@/components/icons/landing/ArrowRight';
 import BarChart3 from '@/components/icons/landing/BarChart3';
