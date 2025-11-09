@@ -1,15 +1,5 @@
+import { PlatformData, PlatformType } from '@/types/agent-install';
 import { SiKubernetes, SiDocker, SiApple, SiAmazonecs, SiOpentelemetry } from 'react-icons/si';
-
-export type PlatformType = 'kubernetes' | 'docker' | 'ecs' | 'macos' | 'opentelemetry';
-
-export interface PlatformData {
-  icon: React.ReactNode;
-  iconLarge: React.ReactNode;
-  title: string;
-  description: string;
-  command: string;
-  category: 'Container Platform' | 'Host based' | 'Monitoring';
-}
 
 export const platformsData: Record<PlatformType, PlatformData> = {
   kubernetes: {

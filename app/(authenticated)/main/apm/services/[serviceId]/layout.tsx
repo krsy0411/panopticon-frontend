@@ -1,4 +1,4 @@
-import Sidebar from '@/components/common/app/Sidebar';
+import Sidebar from '@/components/features/apm/services/service_id/Sidebar';
 
 export default function ApmLayout({ children }: { children: React.ReactNode }) {
   return (

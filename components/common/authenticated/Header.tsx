@@ -3,7 +3,7 @@ import { GrHostMaintenance } from 'react-icons/gr';
 import { HeaderDropdown } from './HeaderDropdown';
 import Logo from '@/components/icons/Logo';
 
-export const Header = () => {
+export const AuthenticatedHeader = () => {
   // APM 드롭다운 아이템
   const apmItems = [
     {

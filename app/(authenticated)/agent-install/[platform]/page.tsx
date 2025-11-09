@@ -1,5 +1,6 @@
-import { platformsData, PlatformType } from '../platforms';
-import PlatformInstallClient from './PlatformInstallClient';
+import PlatformInstallClient from '@/components/features/agent-install/PlatformInstallClient';
+import { platformsData } from '../platforms';
+import { PlatformType } from '@/types/agent-install';
 
 export function generateStaticParams() {
   return Object.keys(platformsData).map((platform) => ({ platform }));

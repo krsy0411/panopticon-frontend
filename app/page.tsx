@@ -1,14 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import Button from '@/components/ui/BaseButton';
+import Button from '@/components/ui/Button';
 import FeatureCard from '@/components/ui/FeatureCard';
-import Logo from '@/components/icons/Logo';
 import ArrowRight from '@/components/icons/landing/ArrowRight';
 import BarChart3 from '@/components/icons/landing/BarChart3';
 import Zap from '@/components/icons/landing/Zap';
 import AlertTriangle from '@/components/icons/landing/Error';
 import Activity from '@/components/icons/landing/Activity';
+import UnAuthenticatedHeader from '@/components/common/Header';
 
 export default function LandingPage() {
   const router = useRouter();
@@ -18,27 +18,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-cyan-50">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Logo />
-
-          <nav className="flex items-center gap-8">
-            <a href="#features" className="text-gray-600 hover:text-gray-900 transition">
-              Introduction
-            </a>
-            <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition">
-              Pricing
-            </a>
-            <a href="#docs" className="text-gray-600 hover:text-gray-900 transition">
-              Docs
-            </a>
-            <Button onClick={handleNavigate} variant="default">
-              Sign In
-            </Button>
-          </nav>
-        </div>
-      </header>
+      <UnAuthenticatedHeader handleNavigate={handleNavigate} />
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-6 pt-20 pb-32">

@@ -2,17 +2,16 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Logo from '@/components/icons/Logo';
-import { platformsData, PlatformType } from '../platforms';
 import { IoArrowBack } from 'react-icons/io5';
 import { StepIndicator } from './StepIndicator';
+import { InstallStep, MonitoringOptions, PlatformType, StepConfig } from '@/types/agent-install';
+import { platformsData } from '@/app/(authenticated)/agent-install/platforms';
 import {
   DockerStepOne,
-  DockerStepTwo,
   DockerStepThree,
+  DockerStepTwo,
   DockerVerificationStep,
 } from './DockerSteps';
-import { InstallStep, MonitoringOptions, StepConfig } from './types';
 
 const platformStepConfig: Record<PlatformType, StepConfig> = {
   docker: { total: 4, showOptions: true },
@@ -178,12 +177,6 @@ export default function PlatformInstallClient({ platformKey }: Props) {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-cyan-50">
-      <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Logo />
-        </div>
-      </header>
-
       <div className="mx-auto max-w-4xl px-6 py-16">
         <button
           onClick={handleBack}

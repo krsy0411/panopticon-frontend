@@ -25,4 +25,5 @@ EXPOSE 3000
 ENV NODE_ENV=development
 
 # Default command starts the Next.js dev server (binds to 0.0.0.0 when using Next 13+)
+# Docker Compose 사용: "docker compose up"
 CMD ["npm", "run", "dev"]

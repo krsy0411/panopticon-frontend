@@ -4,12 +4,12 @@ import Table from '@/components/ui/Table';
 import DatabaseIcon from '@/components/icons/service/Database';
 import FrontendIcon from '@/components/icons/service/Frontend';
 import ApiIcon from '@/components/icons/service/Api';
-import { SelectDate } from '@/components/common/SelectDate';
 import ViewModeSelectBox from './components/ViewModeSelectBox';
 import PageSizeSelect from './components/PageSizeSelect';
 import Pagination from './components/Pagination';
 import { useState } from 'react';
 import SearchInput from '@/components/ui/SearchInput';
+import { SelectDate } from '@/components/features/apm/services/SelectDate';
 
 type ServiceType = 'DB' | 'Frontend' | 'API';
 
@@ -145,7 +145,7 @@ export default function ServicesPage() {
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
   return (
-    <>
+    <div id="apm-services-container" className="p-8">
       <h1 className="text-2xl font-bold mb-6">서비스 목록</h1>
 
       <SearchInput placeholder="서비스 검색..." className="mb-4 w-80 h-10" />
@@ -170,6 +170,6 @@ export default function ServicesPage() {
       ) : (
         <div>맵 뷰 구현 예정...</div>
       )}
-    </>
+    </div>
   );
 }
