@@ -1,6 +1,6 @@
 import { ReactNode, useMemo } from 'react';
 import { IoCheckmarkCircle } from 'react-icons/io5';
-import { CopyableCodeBlock } from './CopyableCodeBlock';
+import { CopyableCodeBlock } from '../CopyableCodeBlock';
 import { MonitoringOptions } from '@/types/agent-install';
 
 type BaseStepProps = {

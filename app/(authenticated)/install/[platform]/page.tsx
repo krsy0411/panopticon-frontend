@@ -1,4 +1,4 @@
-import PlatformInstallClient from '@/components/features/agent-install/PlatformInstallClient';
+import PlatformInstallClient from '@/components/features/install/PlatformInstallClient';
 import { platformsData } from '../platforms';
 import { PlatformType } from '@/types/agent-install';
 

@@ -11,13 +11,39 @@ export interface StepConfig {
   showOptions: boolean;
 }
 
-export type PlatformType = 'kubernetes' | 'docker' | 'ecs' | 'macos' | 'opentelemetry';
+export type PlatformType =
+  | 'kubernetes'
+  | 'docker'
+  | 'ecs'
+  | 'macos'
+  | 'opentelemetry'
+  | 'fluentbit';
 
 export interface PlatformData {
   icon: React.ReactNode;
   iconLarge: React.ReactNode;
   title: string;
   description: string;
-  command: string;
-  category: 'Container Platform' | 'Host based' | 'Monitoring';
+  steps: InstallationStep[];
+  category: 'Container Platform' | 'Host based' | 'Monitoring' | 'Log Collection';
+}
+
+// Application Monitoring Types
+export type FrameworkType = 'nodejs' | 'nextjs' | 'python';
+
+export interface InstallationStep {
+  title: string;
+  description?: string;
+  code?: string;
+  language?: string;
+}
+
+export interface FrameworkData {
+  icon: React.ReactNode;
+  iconLarge: React.ReactNode;
+  title: string;
+  description: string;
+  category: 'Backend' | 'Frontend' | 'Fullstack';
+  steps: InstallationStep[];
+  packageManager?: 'npm' | 'pip' | 'go';
 }

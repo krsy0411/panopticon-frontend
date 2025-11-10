@@ -3,15 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { IoArrowBack } from 'react-icons/io5';
-import { StepIndicator } from './StepIndicator';
+import { StepIndicator } from './docker/StepIndicator';
 import { InstallStep, MonitoringOptions, PlatformType, StepConfig } from '@/types/agent-install';
-import { platformsData } from '@/app/(authenticated)/agent-install/platforms';
+import { platformsData } from '@/app/(authenticated)/install/platforms';
 import {
   DockerStepOne,
   DockerStepThree,
   DockerStepTwo,
   DockerVerificationStep,
-} from './DockerSteps';
+} from './docker/DockerSteps';
+import { CopyableCodeBlock } from './CopyableCodeBlock';
 
 const platformStepConfig: Record<PlatformType, StepConfig> = {
   docker: { total: 4, showOptions: true },
@@ -19,6 +20,7 @@ const platformStepConfig: Record<PlatformType, StepConfig> = {
   ecs: { total: 3, showOptions: true },
   macos: { total: 3, showOptions: false },
   opentelemetry: { total: 3, showOptions: true },
+  fluentbit: { total: 1, showOptions: false },
 };
 
 type Props = { platformKey: PlatformType };
@@ -48,7 +50,7 @@ export default function PlatformInstallClient({ platformKey }: Props) {
         <div className="text-center">
           <h1 className="mb-4 text-2xl font-bold text-gray-900">Platform not found</h1>
           <button
-            onClick={() => router.push('/agent-install')}
+            onClick={() => router.push('/install')}
             className="text-blue-600 underline transition hover:text-blue-700"
           >
             Go back to platform selection
@@ -58,7 +60,7 @@ export default function PlatformInstallClient({ platformKey }: Props) {
     );
   }
 
-  const handleBack = () => router.push('/agent-install');
+  const handleBack = () => router.push('/install');
 
   const handleNextStep = () => {
     if (currentStep < stepConfig.total) {
@@ -105,15 +107,67 @@ export default function PlatformInstallClient({ platformKey }: Props) {
     }, 2000);
   };
 
+  const renderGenericInstallation = () => {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+          <div className="flex items-center gap-4">
+            {platform.iconLarge}
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">{platform.title}</h2>
+              <p className="text-gray-600 mt-1">{platform.description}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Installation Steps */}
+        {platform.steps.map((step, index) => (
+          <div key={index} className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+            <h2 className="mb-4 text-xl font-semibold text-gray-900">{step.title}</h2>
+
+            {step.description && <p className="mb-4 text-gray-600">{step.description}</p>}
+
+            {step.code && <CopyableCodeBlock code={step.code} />}
+          </div>
+        ))}
+
+        {/* Next Steps */}
+        <div className="rounded-xl bg-blue-50 p-6 border border-blue-200">
+          <h3 className="text-lg font-semibold text-blue-900 mb-3">다음 단계</h3>
+          <p className="text-blue-800 mb-4">
+            에이전트 배포가 완료되면 애플리케이션 데이터가 Panopticon으로 전송됩니다.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => router.push('/install')}
+              className="rounded-lg bg-blue-600 px-6 py-2 text-white transition hover:bg-blue-700"
+            >
+              설치 페이지로 돌아가기
+            </button>
+            <button
+              onClick={() => router.push('/main')}
+              className="rounded-lg border border-blue-600 bg-white px-6 py-2 text-blue-600 transition hover:bg-blue-50"
+            >
+              대시보드로 이동
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
-    if (platformKey !== 'docker') {
-      return (
-        <section className="rounded-2xl border border-dashed border-gray-300 bg-white/80 p-12 text-center text-gray-400">
-          <div className="text-lg font-semibold text-gray-500">작성 전</div>
-        </section>
-      );
+    // Docker만 특별한 Step UI 사용, 나머지는 일반 설치 가이드
+    if (platformKey === 'docker') {
+      return renderDockerSteps();
     }
 
+    // 일반 플랫폼 (Kubernetes, Fluent Bit 등)
+    return renderGenericInstallation();
+  };
+
+  const renderDockerSteps = () => {
     switch (currentStep) {
       case 1:
         return (
