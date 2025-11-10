@@ -5,6 +5,7 @@ import { SelectDate } from '@/components/features/apm/services/SelectDate';
 import TracesSection from '@/components/features/apm/services/[serviceId]/section/Traces';
 import ChartsSection from '@/components/features/apm/services/[serviceId]/section/Charts';
 import { TimeRange } from '@/types/time';
+import ResourcesSection from '@/components/features/apm/services/[serviceId]/section/Resources';
 
 export default function ServiceOverview() {
   const [timeRange, setTimeRange] = useState<TimeRange | null>(null);
@@ -15,7 +16,7 @@ export default function ServiceOverview() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* 개요 영역 */}
       <div id="overview" className="flex justify-between items-center mb-2 scroll-mt-8">
         <h1 className="text-2xl font-semibold text-gray-800">Overview</h1>
 
@@ -29,9 +30,7 @@ export default function ServiceOverview() {
       {/* Resources section - 준비중 */}
       <div id="resources" className="pt-4 scroll-mt-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-2">Resources</h2>
-        <div className="bg-white p-8 rounded-lg border border-gray-200 text-center text-gray-500">
-          Coming soon...
-        </div>
+        <ResourcesSection />
       </div>
 
       {/* Dependencies section - 준비중 */}

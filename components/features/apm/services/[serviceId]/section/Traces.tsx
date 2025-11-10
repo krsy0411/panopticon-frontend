@@ -155,23 +155,32 @@ export default function TracesSection() {
       // 임시: 더미 데이터 생성 (페이지네이션 반영)
       const startIndex = (currentPage - 1) * itemsPerPage;
       const mockResponse: TraceResponse = {
-        traces: Array.from({ length: itemsPerPage }, (_, i) => ({
-          trace_id: `trace_${startIndex + i}_${Date.now()}`,
-          date: new Date(Date.now() - Math.random() * 300000).toISOString(),
-          resource: [
-            `GET /api/users/${startIndex + i}`,
-            `POST /api/orders`,
-            `GET /api/products/${startIndex + i}`,
-          ][Math.floor(Math.random() * 3)],
-          service: ['user-service', 'order-service', 'product-service'][
-            Math.floor(Math.random() * 3)
-          ],
-          duration_ms: Math.floor(Math.random() * 2000) + 50,
-          method: ['GET', 'POST', 'PUT'][Math.floor(Math.random() * 3)],
-          status_code: [200, 201, 400, 500][Math.floor(Math.random() * 4)],
-          span_count: Math.floor(Math.random() * 10) + 1,
-          error: Math.random() > 0.8,
-        })),
+        traces: Array.from({ length: itemsPerPage }, (_, i) => {
+          const status_code = [200, 201, 400, 500][Math.floor(Math.random() * 4)];
+          let error = false;
+          if (status_code >= 400) {
+            error = true;
+          } else {
+            error = false;
+          }
+          return {
+            trace_id: `trace_${startIndex + i}_${Date.now()}`,
+            date: new Date(Date.now() - Math.random() * 300000).toISOString(),
+            resource: [
+              `GET /api/users/${startIndex + i}`,
+              `POST /api/orders`,
+              `GET /api/products/${startIndex + i}`,
+            ][Math.floor(Math.random() * 3)],
+            service: ['user-service', 'order-service', 'product-service'][
+              Math.floor(Math.random() * 3)
+            ],
+            duration_ms: Math.floor(Math.random() * 2000) + 50,
+            method: ['GET', 'POST', 'PUT'][Math.floor(Math.random() * 3)],
+            status_code,
+            span_count: Math.floor(Math.random() * 10) + 1,
+            error,
+          };
+        }),
         total: 1234,
         page: currentPage,
         limit: itemsPerPage,
@@ -185,7 +194,12 @@ export default function TracesSection() {
 
       const data = mockResponse;
 
-      const transformedTraces = data.traces.map(transformTraceToPoint);
+      let transformedTraces = data.traces.map(transformTraceToPoint);
+      // error=true가 먼저 오도록 정렬
+      transformedTraces = transformedTraces.sort((a, b) => {
+        if (a.status === b.status) return 0;
+        return a.status === 'error' ? -1 : 1;
+      });
       setTraces(transformedTraces);
       setTotalCount(data.total);
       setError(null);
