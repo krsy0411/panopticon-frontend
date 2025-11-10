@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FiClock, FiCalendar, FiChevronDown } from 'react-icons/fi';
 import { TimeRange } from '@/types/time';
 import { toast } from 'react-toastify';
@@ -222,19 +223,27 @@ export const SelectDate = ({ value, onChange }: SelectDateProps) => {
       </button>
 
       {/* 드롭다운 메뉴 */}
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-48">
-          {!showCalendar ? (
-            <PresetDropdown
-              selectedRange={selectedRange}
-              onSelectRange={handlePresetSelect}
-              onShowCalendar={handleShowCalendar}
-            />
-          ) : (
-            <CalendarPicker onApply={handleCustomDateApply} onBack={handleBackToPreset} />
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 w-48"
+          >
+            {!showCalendar ? (
+              <PresetDropdown
+                selectedRange={selectedRange}
+                onSelectRange={handlePresetSelect}
+                onShowCalendar={handleShowCalendar}
+              />
+            ) : (
+              <CalendarPicker onApply={handleCustomDateApply} onBack={handleBackToPreset} />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

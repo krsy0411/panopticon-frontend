@@ -1,35 +1,36 @@
 'use client';
 import dynamic from 'next/dynamic';
-import LogsSection from './components/Logs';
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FiChevronDown } from 'react-icons/fi';
+import { useCallback, useEffect, useState } from 'react';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
-const TIME_RANGES = [
-  { label: 'Past 5 Minutes', value: '5m' },
-  { label: 'Past 30 Minutes', value: '30m' },
-  { label: 'Past 1 Hour', value: '1h' },
-  { label: 'Past 1 Day', value: '1d' },
-  { label: 'Past 1 Week', value: '1w' },
-  { label: 'Past 1 Month', value: '1mo' },
-];
+interface ChartsProps {
+  timeRange: string;
+}
 
-export default function ServiceOverview() {
-  const [timeRange, setTimeRange] = useState('5m');
-  const [openDropdown, setOpenDropdown] = useState(false);
+export default function ChartsSection({ timeRange }: ChartsProps) {
   const [isLoading, setIsLoading] = useState(false);
+
+  // latency의 초기값을 실제 사용하는 구조와 동일하게 맞춤
+  const initialLatency = {
+    p50: Array(10).fill(0),
+    p75: Array(10).fill(0),
+    p90: Array(10).fill(0),
+    p95: Array(10).fill(0),
+    p99: Array(10).fill(0),
+    p99_9: Array(10).fill(0),
+    max: Array(10).fill(0),
+  };
 
   const [chartData, setChartData] = useState({
     timestamps: generateTimestamps('5m'),
-    requests: [] as number[],
-    errors: [] as number[],
-    latency: {} as Record<string, number[]>,
+    requests: Array(10).fill(0),
+    errors: Array(10).fill(0),
+    latency: initialLatency,
   });
 
   /* ------- API 호출 => 현재 더미 데이터(변경 필요) -------- */
-  const fetchChartData = async (range: string) => {
+  const fetchChartData = useCallback(async (range: string) => {
     setIsLoading(true);
 
     await new Promise((res) => setTimeout(res, 400)); // 로딩 딜레이 시뮬레이션
@@ -54,43 +55,15 @@ export default function ServiceOverview() {
     });
 
     setIsLoading(false);
-  };
+  }, []);
 
-  // 기간 변경 시 데이터 다시 불러오기
+  // 기간 변경 시 데이터 다시 불러오기 (1회만)
   useEffect(() => {
     const loadData = async () => {
       await fetchChartData(timeRange);
     };
     loadData();
-  }, [timeRange]);
-
-  /* -------------------- 실시간 갱신(2초) -------------------- */
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setChartData((prev) => {
-        const nextLabel = formatTimestamp(timeRange);
-        const nextReq = Math.max(
-          5000,
-          Math.floor(prev.requests.at(-1)! + (Math.random() - 0.5) * 8000),
-        );
-        const nextErr = Math.max(0, Math.floor(prev.errors.at(-1)! + (Math.random() - 0.5) * 10));
-        const nextLat = Object.fromEntries(
-          Object.entries(prev.latency).map(([k, v]) => [
-            k,
-            [...v.slice(-9), Math.max(100, Math.floor(v.at(-1)! + (Math.random() - 0.5) * 40))],
-          ]),
-        );
-
-        return {
-          timestamps: [...prev.timestamps.slice(-9), nextLabel],
-          requests: [...prev.requests.slice(-9), nextReq],
-          errors: [...prev.errors.slice(-9), nextErr],
-          latency: nextLat,
-        };
-      });
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [timeRange]);
+  }, [timeRange, fetchChartData]);
 
   /* -------------------- 차트 공통 스타일 ------------------ */
   const baseStyle = {
@@ -290,77 +263,25 @@ export default function ServiceOverview() {
     ],
   };
 
+  if (isLoading) {
+    return <div className="text-center text-gray-500 p-10">Loading data...</div>;
+  }
+
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-2">
-        <h1 className="text-2xl font-semibold text-gray-800">Overview</h1>
-
-        {/* Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setOpenDropdown(!openDropdown)}
-            className="flex items-center justify-between gap-2 border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white hover:bg-gray-50 transition"
-          >
-            <span>{TIME_RANGES.find((t) => t.value === timeRange)?.label}</span>
-            <FiChevronDown size={16} />
-          </button>
-
-          <AnimatePresence>
-            {openDropdown && (
-              <motion.ul
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-md shadow-md z-20 overflow-hidden"
-              >
-                {TIME_RANGES.map((r) => (
-                  <li
-                    key={r.value}
-                    onClick={() => {
-                      setTimeRange(r.value);
-                      setOpenDropdown(false);
-                    }}
-                    className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 ${
-                      r.value === timeRange ? 'bg-gray-100 font-medium' : 'text-gray-700'
-                    }`}
-                  >
-                    {r.label}
-                  </li>
-                ))}
-              </motion.ul>
-            )}
-          </AnimatePresence>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white p-5 rounded-lg border border-gray-200">
+          <ReactECharts option={requestsOption} style={{ height: 300 }} />
+        </div>
+        <div className="bg-white p-5 rounded-lg border border-gray-200">
+          <ReactECharts option={errorsOption} style={{ height: 300 }} />
         </div>
       </div>
 
-      {/* 차트 영역 */}
-      {isLoading ? (
-        <div className="text-center text-gray-500 p-10">Loading data...</div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-5 rounded-lg border border-gray-200">
-              <ReactECharts option={requestsOption} style={{ height: 300 }} />
-            </div>
-            <div className="bg-white p-5 rounded-lg border border-gray-200">
-              <ReactECharts option={errorsOption} style={{ height: 300 }} />
-            </div>
-          </div>
-
-          <div className="bg-white p-5 rounded-lg border border-gray-200">
-            <ReactECharts option={latencyOption} style={{ height: 340 }} />
-          </div>
-        </>
-      )}
-
-      {/* Logs section */}
-      <div className="pt-4">
-        <h2 className="text-xl font-semibold text-gray-800 mb-2">Logs</h2>
-        <LogsSection />
+      <div className="bg-white p-5 rounded-lg border border-gray-200">
+        <ReactECharts option={latencyOption} style={{ height: 340 }} />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -394,8 +315,4 @@ function formatDateLabel(date: Date, range: string): string {
       .toString()
       .padStart(2, '0')}`;
   }
-}
-
-function formatTimestamp(range: string): string {
-  return formatDateLabel(new Date(), range);
 }

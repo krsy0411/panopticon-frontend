@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import FilterBar from '@/components/features/apm/services/service_id/logs/FilterBar';
-import StatGrid from '@/components/features/apm/services/service_id/logs/StatGrid';
-import LogList from '@/components/features/apm/services/service_id/logs/LogList';
-import { mockLogs, mockStats } from '@/components/features/apm/services/service_id/logs/mock';
+import { useMemo, useState } from 'react';
+import { mockLogs, mockStats } from '../logs/mock';
+import FilterBar from '../logs/FilterBar';
+import StatGrid from '../logs/StatGrid';
+import LogList from '../logs/LogList';
 
 export default function LogsSection() {
   const [query, setQuery] = useState('');

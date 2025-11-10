@@ -1,4 +1,4 @@
-import Sidebar from '@/components/features/apm/services/service_id/Sidebar';
+import Sidebar from '@/components/features/apm/services/[serviceId]/Sidebar';
 
 export async function generateStaticParams() {
   const services = ['auth', 'user', 'frontend', 'backend', 'payment'];
@@ -7,9 +7,9 @@ export async function generateStaticParams() {
 
 export default function ApmLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex">
+    <div className="flex gap-6 p-6 bg-gray-50 min-h-screen">
       <Sidebar />
-      <main className="flex-1 pl-64 p-6 bg-gray-50 min-h-screen">{children}</main>
+      <main className="flex-1">{children}</main>
     </div>
   );
 }
