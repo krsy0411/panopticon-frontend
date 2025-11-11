@@ -6,6 +6,7 @@ import TracesSection from '@/components/features/apm/services/[serviceId]/sectio
 import ChartsSection from '@/components/features/apm/services/[serviceId]/section/Charts';
 import { TimeRange } from '@/types/time';
 import ResourcesSection from '@/components/features/apm/services/[serviceId]/section/Resources';
+import DependenciesSection from '@/components/features/apm/services/[serviceId]/section/Dependencies';
 
 export default function ServiceOverview() {
   const [timeRange, setTimeRange] = useState<TimeRange | null>(null);
@@ -36,9 +37,7 @@ export default function ServiceOverview() {
       {/* Dependencies section - 준비중 */}
       <div id="dependencies" className="pt-4 scroll-mt-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-2">Dependencies</h2>
-        <div className="bg-white p-8 rounded-lg border border-gray-200 text-center text-gray-500">
-          Coming soon...
-        </div>
+        <DependenciesSection />
       </div>
 
       {/* 트레이스 영역 */}

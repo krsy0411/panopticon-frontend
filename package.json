@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "format:check:ci": "prettier --check \"app/**/*.{js,jsx,ts,tsx,json,css,md,html,svg}\" \"components/**/*.{js,jsx,ts,tsx,json,css,md,html,svg}\" \"types/**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:all": "npm run lint:ci && npm run format:check:ci && npm run typecheck"
   },
   "dependencies": {
     "echarts-for-react": "^3.0.5",
