@@ -12,11 +12,17 @@ import {
   DockerStepTwo,
   DockerVerificationStep,
 } from './docker/DockerSteps';
+import {
+  KubernetesStepOne,
+  KubernetesStepTwo,
+  KubernetesStepThree,
+  KubernetesStepFour,
+} from './kubernetes/KubernetesSteps';
 import { CopyableCodeBlock } from './CopyableCodeBlock';
 
 const platformStepConfig: Record<PlatformType, StepConfig> = {
   docker: { total: 4, showOptions: true },
-  kubernetes: { total: 3, showOptions: true },
+  kubernetes: { total: 4, showOptions: true },
   ecs: { total: 3, showOptions: true },
   macos: { total: 3, showOptions: false },
   opentelemetry: { total: 3, showOptions: true },
@@ -158,12 +164,16 @@ export default function PlatformInstallClient({ platformKey }: Props) {
   };
 
   const renderContent = () => {
-    // Docker만 특별한 Step UI 사용, 나머지는 일반 설치 가이드
+    // Docker와 Kubernetes는 특별한 Step UI 사용, 나머지는 일반 설치 가이드
     if (platformKey === 'docker') {
       return renderDockerSteps();
     }
 
-    // 일반 플랫폼 (Kubernetes, Fluent Bit 등)
+    if (platformKey === 'kubernetes') {
+      return renderKubernetesSteps();
+    }
+
+    // 일반 플랫폼 (Fluent Bit 등)
     return renderGenericInstallation();
   };
 
@@ -220,6 +230,53 @@ export default function PlatformInstallClient({ platformKey }: Props) {
             onVerificationChange={handleVerificationToggle}
             onPrev={handlePrevStep}
             onComplete={handleInstallComplete}
+            onInstallAnother={handleBack}
+            onGoDashboard={() => router.push('/main')}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderKubernetesSteps = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <KubernetesStepOne
+            icon={platform.iconLarge}
+            title={platform.title}
+            totalSteps={stepConfig.total}
+            onNext={handleNextStep}
+          />
+        );
+      case 2:
+        return (
+          <KubernetesStepTwo
+            icon={platform.iconLarge}
+            title={platform.title}
+            totalSteps={stepConfig.total}
+            onPrev={handlePrevStep}
+            onNext={handleNextStep}
+          />
+        );
+      case 3:
+        return (
+          <KubernetesStepThree
+            icon={platform.iconLarge}
+            title={platform.title}
+            totalSteps={stepConfig.total}
+            onPrev={handlePrevStep}
+            onNext={handleNextStep}
+          />
+        );
+      case 4:
+        return (
+          <KubernetesStepFour
+            icon={platform.iconLarge}
+            title={platform.title}
+            totalSteps={stepConfig.total}
+            onPrev={handlePrevStep}
             onInstallAnother={handleBack}
             onGoDashboard={() => router.push('/main')}
           />
