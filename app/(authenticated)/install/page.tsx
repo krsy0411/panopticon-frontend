@@ -124,40 +124,58 @@ export default function InstallPage() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {Object.entries(platformsData).map(([platformKey, platform]) => (
-              <button
-                key={platformKey}
-                onClick={() => handlePlatformSelect(platformKey as PlatformType)}
-                className="p-6 rounded-xl border-2 transition-all duration-200 text-black hover:border-blue-500 hover:shadow-lg hover:cursor-pointer bg-white"
-              >
-                <div className="flex flex-col items-center gap-4">
-                  {platform.icon}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      {platformNames[platformKey as PlatformType]}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {platform.description.split('\n').map((line, idx) => (
-                        <span key={idx}>
-                          {line}
-                          {idx < platform.description.split('\n').length - 1 && <br />}
-                        </span>
-                      ))}
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+            {Object.entries(platformsData).map(([platformKey, platform]) => {
+              const isActive = platformKey === 'kubernetes';
 
-        <div className="mt-8 text-center">
-          <button
-            onClick={() => router.push('/main')}
-            className="text-gray-600 hover:text-gray-900 underline text-sm"
-          >
-            Skip for now
-          </button>
+              return (
+                <div key={platformKey} className="relative">
+                  <button
+                    onClick={() => isActive && handlePlatformSelect(platformKey as PlatformType)}
+                    disabled={!isActive}
+                    className={`p-6 rounded-xl border-2 text-black bg-white transition-all duration-200 w-full
+            ${
+              isActive
+                ? 'hover:border-blue-500 hover:shadow-lg cursor-pointer'
+                : 'border-gray-200 cursor-not-allowed'
+            }`}
+                  >
+                    <div className="flex flex-col items-center gap-4">
+                      {platform.icon}
+                      <div className="text-center">
+                        <h3 className="text-lg font-semibold mb-2">
+                          {platformNames[platformKey as PlatformType]}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {platform.description.split('\n').map((line, idx) => (
+                            <span key={idx}>
+                              {line}
+                              {idx < platform.description.split('\n').length - 1 && <br />}
+                            </span>
+                          ))}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* 오버레이:  글씨 크고 또렷, 배경 살짝 어둡게 */}
+                  {!isActive && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-gray-200/70">
+                      <span className="text-2xl font-bold text-gray-800">Coming soon</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-8 text-center">
+            <button
+              onClick={() => router.push('/main')}
+              className="text-gray-600 hover:text-gray-900 underline text-sm"
+            >
+              Skip for now
+            </button>
+          </div>
         </div>
       </div>
     </div>

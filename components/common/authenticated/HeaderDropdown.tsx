@@ -33,7 +33,13 @@ export const HeaderDropdown = ({
   const handleItemClick = () => setIsOpen(false);
 
   return (
-    <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <div
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocusCapture={handleMouseEnter}
+      onBlurCapture={handleMouseLeave}
+    >
       <Link
         href={triggerHref}
         aria-haspopup="menu"
@@ -47,7 +53,7 @@ export const HeaderDropdown = ({
 
       {/* Dropdown */}
       <div
-        className={`absolute right-0 mt-2 w-56 bg-white border rounded shadow-lg transition-all duration-150 ${
+        className={`absolute right-0 top-full w-56 bg-white border rounded shadow-lg transition-all duration-150 ${
           isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-1'
         }`}
       >
@@ -56,8 +62,8 @@ export const HeaderDropdown = ({
           <h3 className="font-semibold text-zinc-900 text-xl">{title}</h3>
         </div>
 
-        {/* 아이템 목록 */}
-        <div className="pt-0 pb-2 pl-2 pr-2">
+        {/* 메뉴 항목 */}
+        <div className="pt-0 pb-2 px-2">
           {items.map((item) => (
             <Link
               key={item.href}

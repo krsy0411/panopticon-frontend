@@ -1,6 +1,7 @@
 import { SiGoogleanalytics } from 'react-icons/si';
 import { GrHostMaintenance } from 'react-icons/gr';
 import { HeaderDropdown } from './HeaderDropdown';
+import { FiBell, FiUser } from 'react-icons/fi';
 import Logo from '@/components/icons/Logo';
 
 export const AuthenticatedHeader = () => {
@@ -30,21 +31,36 @@ export const AuthenticatedHeader = () => {
         </div>
 
         {/* 오른쪽 아이콘들: APM, Agent 각각 드롭다운 */}
-        <div className="ml-auto flex items-center gap-2">
-          <HeaderDropdown
-            triggerIcon={<SiGoogleanalytics className="w-6 h-6 text-zinc-700" />}
-            triggerLabel="APM menu"
-            triggerHref="/apm"
-            title="APM"
-            items={apmItems}
-          />
-          <HeaderDropdown
-            triggerIcon={<GrHostMaintenance className="w-6 h-6 text-zinc-700" />}
-            triggerLabel="Agent menu"
-            triggerHref="/install"
-            title="Integration"
-            items={agentItems}
-          />
+        <div className="ml-auto flex items-center gap-6">
+          <div className="flex items-center gap-5">
+            <HeaderDropdown
+              triggerIcon={<SiGoogleanalytics className="w-6 h-6 text-zinc-700" />}
+              triggerLabel="APM menu"
+              triggerHref="/apm"
+              title="APM"
+              items={apmItems}
+            />
+            <HeaderDropdown
+              triggerIcon={<GrHostMaintenance className="w-6 h-6 text-zinc-700" />}
+              triggerLabel="Agent menu"
+              triggerHref="/install"
+              title="Integration"
+              items={agentItems}
+            />
+          </div>
+
+          {/* 구분선 */}
+          <div className="h-6 w-px bg-zinc-300" />
+
+          {/* 알림, 마이페이지 */}
+          <div className="flex items-center gap-5">
+            <button className="hover:text-blue-600 transition">
+              <FiBell className="w-7 h-7 text-zinc-700" />
+            </button>
+            <button className="hover:text-blue-600 transition">
+              <FiUser className="w-7 h-7 text-zinc-700" />
+            </button>
+          </div>
         </div>
       </div>
     </header>
