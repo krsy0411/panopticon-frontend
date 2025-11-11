@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { FiAlertOctagon } from 'react-icons/fi';
 import { BiBug, BiGridAlt } from 'react-icons/bi';
@@ -80,6 +81,7 @@ const columns = [
 ];
 
 export default function ApmPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
 
   // 타임스탬프는 useMemo로 안정화
@@ -107,6 +109,11 @@ export default function ApmPage() {
     servicesData?.services.filter((service) =>
       service.service_name.toLowerCase().includes(searchQuery.toLowerCase()),
     ) || [];
+
+  // 테이블 행 클릭 핸들러
+  const handleServiceRowClick = (service: TableService) => {
+    router.push(`/apm/services/${service.service_name}`);
+  };
 
   return (
     <>
@@ -154,6 +161,7 @@ export default function ApmPage() {
               data={filteredServices}
               showFavorite={true}
               className="w-full"
+              onRowClick={handleServiceRowClick}
             />
           )}
         </div>

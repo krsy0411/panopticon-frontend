@@ -7,8 +7,9 @@ import { useQuery } from '@tanstack/react-query';
 import { getServiceTraces } from '@/src/api/apm';
 import { Trace } from '@/types/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
+import { formatChartTimeLabel, getXAxisInterval } from '@/src/utils/chartFormatter';
 
-const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
+const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false }); // Import from utility
 
 interface TracesSectionProps {
   serviceName: string;
@@ -127,7 +128,7 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
   const itemsPerPage = 15; // 페이지당 15개 고정
 
   // Zustand store에서 시간 정보 가져오기
-  const { startTime, endTime } = useTimeRangeStore();
+  const { startTime, endTime, interval } = useTimeRangeStore();
 
   // 모든 트레이스 데이터 가져오기 (그래프 및 테이블 공용)
   const { data, isLoading, error } = useQuery({
@@ -171,18 +172,42 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
     }
   };
 
-  // 상태별로 데이터 분리 (그래프는 모든 트레이스 사용, x축은 시간만 표시)
+  // 상태별로 데이터 분리 (그래프는 모든 트레이스 사용, x축은 interval에 맞게 포맷팅)
   const successTraces = allTraces
     .filter((t: TracePoint) => t.status === 'success')
     .map((t: TracePoint) => {
-      const timeOnly = t.timestamp.split(' ')[1]; // "12/31 00:00:00" -> "00:00:00"
-      return [timeOnly, t.duration];
+      // trace의 timestamp에서 Date 객체 생성 후 포맷팅
+      const dateStr = t.timestamp.split(' ')[0]; // "12/31"
+      const timeStr = t.timestamp.split(' ')[1]; // "00:00:00"
+      const [month, day] = dateStr.split('/');
+      const [hour, minute] = timeStr.split(':');
+      const traceDate = new Date(
+        2024,
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute),
+      );
+      const formattedLabel = formatChartTimeLabel(traceDate, interval);
+      return [formattedLabel, t.duration];
     });
   const errorTraces = allTraces
     .filter((t: TracePoint) => t.status === 'error')
     .map((t: TracePoint) => {
-      const timeOnly = t.timestamp.split(' ')[1]; // "12/31 00:00:00" -> "00:00:00"
-      return [timeOnly, t.duration];
+      // trace의 timestamp에서 Date 객체 생성 후 포맷팅
+      const dateStr = t.timestamp.split(' ')[0]; // "12/31"
+      const timeStr = t.timestamp.split(' ')[1]; // "00:00:00"
+      const [month, day] = dateStr.split('/');
+      const [hour, minute] = timeStr.split(':');
+      const traceDate = new Date(
+        2024,
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hour),
+        parseInt(minute),
+      );
+      const formattedLabel = formatChartTimeLabel(traceDate, interval);
+      return [formattedLabel, t.duration];
     });
 
   const option = {
@@ -199,7 +224,7 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
         color: '#6b7280',
         fontSize: 11,
         rotate: 45,
-        interval: 'auto',
+        interval: getXAxisInterval(interval, allTraces.length),
         hideOverlap: true,
       },
       axisLine: { show: true, lineStyle: { color: '#9ca3af', width: 1 } },

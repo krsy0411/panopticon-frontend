@@ -46,14 +46,14 @@ export function convertTimeRangeToParams(timeRange: TimeRange): TimeRangeParams 
  */
 export function getIntervalForTimeRange(timeRange: TimeRange): string {
   const intervalMap: Record<TimeRange, string> = {
-    '1h': '1m',
-    '3h': '1m',
-    '6h': '5m',
-    '12h': '5m',
-    '1d': '10m',
-    '1w': '1h',
-    '2w': '1h',
-    '1M': '1h',
+    '1h': '5m', // 1시간 → 5분 간격 (12개 포인트)
+    '3h': '10m', // 3시간 → 10분 간격 (18개 포인트)
+    '6h': '30m', // 6시간 → 30분 간격 (12개 포인트)
+    '12h': '1h', // 12시간 → 1시간 간격 (12개 포인트)
+    '1d': '2h', // 1일 → 2시간 간격 (12개 포인트)
+    '1w': '12h', // 1주 → 12시간 간격 (14개 포인트)
+    '2w': '1d', // 2주 → 1일 간격 (14개 포인트)
+    '1M': '2d', // 1개월 → 2일 간격 (15개 포인트)
   };
 
   return intervalMap[timeRange];

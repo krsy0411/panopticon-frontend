@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
 import { getServiceMetrics } from '@/src/api/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
+import { formatChartTimeLabel, getBarWidth } from '@/src/utils/chartFormatter';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
@@ -28,7 +29,8 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
   // 차트 데이터 변환
   const chartData = {
     timestamps:
-      data?.data.latency.map((item) => formatDateLabel(new Date(item.timestamp), interval)) || [],
+      data?.data.latency.map((item) => formatChartTimeLabel(new Date(item.timestamp), interval)) ||
+      [],
     requests: data?.data.requests_and_errors.map((item) => item.hits) || [],
     errors: data?.data.requests_and_errors.map((item) => item.errors) || [],
     latency: {
@@ -90,22 +92,22 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
         name: 'Requests',
         type: 'bar',
         data: chartData.requests,
-        barWidth: 14,
+        barWidth: getBarWidth(interval),
         itemStyle: {
           color: '#2563eb',
           opacity: 0.65,
-          borderRadius: [6, 6, 0, 0],
+          borderRadius: [0, 0, 0, 0],
         },
       },
       {
         name: 'Errors',
         type: 'bar',
         data: chartData.errors,
-        barWidth: 14,
+        barWidth: getBarWidth(interval),
         itemStyle: {
           color: '#ef4444',
           opacity: 0.65,
-          borderRadius: [6, 6, 0, 0],
+          borderRadius: [0, 0, 0, 0],
         },
       },
     ],
@@ -124,11 +126,11 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
         name: 'Errors',
         type: 'bar',
         data: chartData.errors,
-        barWidth: 18,
+        barWidth: getBarWidth(interval),
         itemStyle: {
           color: '#ef4444',
           opacity: 0.7,
-          borderRadius: [6, 6, 0, 0],
+          borderRadius: [0, 0, 0, 0],
         },
       },
     ],
@@ -225,23 +227,4 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
       </div>
     </>
   );
-}
-
-/* -------------------------------
-   헬퍼 함수
---------------------------------*/
-function formatDateLabel(date: Date, range: string): string {
-  if (['5m', '30m', '1h'].includes(range)) {
-    return date.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  } else {
-    return `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date
-      .getDate()
-      .toString()
-      .padStart(2, '0')}`;
-  }
 }

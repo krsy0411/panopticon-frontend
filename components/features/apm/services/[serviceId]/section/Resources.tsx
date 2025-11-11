@@ -10,6 +10,11 @@ import { useQuery } from '@tanstack/react-query';
 import { getServiceResources } from '@/src/api/apm';
 import { Resource, ResourceTableRow } from '@/types/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
+import {
+  formatChartTimeLabel,
+  getBarWidthForResources,
+  getXAxisIntervalForResources,
+} from '@/src/utils/chartFormatter';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
@@ -153,7 +158,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
   const [searchQuery, setSearchQuery] = useState('');
 
   // Zustand store에서 시간 정보 가져오기
-  const { startTime, endTime } = useTimeRangeStore();
+  const { startTime, endTime, interval } = useTimeRangeStore();
 
   // Top N 상태 (각 차트별로 독립적으로 관리)
   const [requestsTopN, setRequestsTopN] = useState<1 | 2 | 3 | 4 | 5>(3);
@@ -219,22 +224,33 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
     setCurrentPage(1);
   };
 
-  // 시간대 레이블 생성 (최근 24시간, 1시간 간격)
+  // 시간대 레이블 생성 (interval에 따라 동적으로 생성)
   const timeLabels = useMemo(() => {
     const labels: string[] = [];
     const now = new Date();
+
+    // interval에 따른 라벨 개수 결정
+    let labelCount = 24; // 기본값
+    if (['5m', '10m'].includes(interval)) {
+      labelCount = 12; // 짧은 간격: 12개 라벨
+    } else if (['30m', '1h'].includes(interval)) {
+      labelCount = 12;
+    } else if (['2h', '12h'].includes(interval)) {
+      labelCount = 8;
+    } else if (['1d', '2d'].includes(interval)) {
+      labelCount = 6;
+    }
+
+    // 시간 레이블 생성
+    const timeStep = Math.ceil(24 / labelCount);
     for (let i = 23; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-      labels.push(
-        time.toLocaleTimeString('en-US', {
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      );
+      if ((23 - i) % timeStep === 0) {
+        const time = new Date(now.getTime() - i * 60 * 60 * 1000);
+        labels.push(formatChartTimeLabel(time, interval));
+      }
     }
     return labels;
-  }, []);
+  }, [interval]);
 
   // Requests 차트 옵션 (독립적인 Top N 적용)
   const requestsChartOption = useMemo(() => {
@@ -244,6 +260,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
       type: 'bar' as const,
       stack: 'total',
       data: timeLabels.map(() => Math.floor(Math.random() * 1000) + 100),
+      barWidth: getBarWidthForResources(interval),
       itemStyle: {
         color: getChartColor(idx),
       },
@@ -263,7 +280,12 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
       xAxis: {
         type: 'category',
         data: timeLabels,
-        axisLabel: { color: '#6b7280', fontSize: 10, interval: 2, rotate: 45 },
+        axisLabel: {
+          color: '#6b7280',
+          fontSize: 10,
+          interval: getXAxisIntervalForResources(interval, timeLabels.length),
+          rotate: 45,
+        },
         axisLine: { lineStyle: { color: '#e5e7eb' } },
       },
       yAxis: {
@@ -273,7 +295,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
       },
       series: seriesData,
     };
-  }, [resources, requestsTopN, timeLabels]);
+  }, [resources, requestsTopN, timeLabels, interval]);
 
   // p95 Latency 차트 옵션 (독립적인 Top N 적용)
   const latencyChartOption = useMemo(() => {
@@ -305,7 +327,12 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
       xAxis: {
         type: 'category',
         data: timeLabels,
-        axisLabel: { color: '#6b7280', fontSize: 10, interval: 2, rotate: 45 },
+        axisLabel: {
+          color: '#6b7280',
+          fontSize: 10,
+          interval: getXAxisIntervalForResources(interval, timeLabels.length),
+          rotate: 45,
+        },
         axisLine: { lineStyle: { color: '#e5e7eb' } },
       },
       yAxis: {
@@ -315,7 +342,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
       },
       series: seriesData,
     };
-  }, [resources, latencyTopN, timeLabels]);
+  }, [resources, latencyTopN, timeLabels, interval]);
 
   // Errors 차트 옵션 (독립적인 Top N 적용)
   const errorsChartOption = useMemo(() => {
@@ -325,6 +352,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
       type: 'bar' as const,
       stack: 'total',
       data: timeLabels.map(() => Math.floor(Math.random() * 50)),
+      barWidth: getBarWidthForResources(interval),
       itemStyle: {
         color: getChartColor(idx),
       },
@@ -344,7 +372,12 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
       xAxis: {
         type: 'category',
         data: timeLabels,
-        axisLabel: { color: '#6b7280', fontSize: 10, interval: 2, rotate: 45 },
+        axisLabel: {
+          color: '#6b7280',
+          fontSize: 10,
+          interval: getXAxisIntervalForResources(interval, timeLabels.length),
+          rotate: 45,
+        },
         axisLine: { lineStyle: { color: '#e5e7eb' } },
       },
       yAxis: {
@@ -354,7 +387,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
       },
       series: seriesData,
     };
-  }, [resources, errorsTopN, timeLabels]);
+  }, [resources, errorsTopN, timeLabels, interval]);
 
   if (error) {
     return (

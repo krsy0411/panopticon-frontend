@@ -19,6 +19,7 @@ interface TableProps<T> {
   showFavorite?: boolean; // 즐겨찾기 열 표시 여부
   onFavoriteClick?: (row: T, index: number) => void; // 즐겨찾기 클릭 핸들러
   getRowId?: (row: T, index: number) => string; // Errors List 하이라이트
+  onRowClick?: (row: T) => void; // 행 클릭 핸들러
 }
 
 export default function Table<T>({
@@ -28,9 +29,17 @@ export default function Table<T>({
   showFavorite = false,
   onFavoriteClick,
   getRowId, // Errors List 하이라이트
+  onRowClick,
 }: TableProps<T>) {
   const [sortField, setSortField] = useState<keyof T | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // 행 클릭 핸들러
+  const handleRowClick = (row: T) => {
+    if (onRowClick) {
+      onRowClick(row);
+    }
+  };
 
   // 정렬 함수
   const getComparator = (key: keyof T, direction: 'asc' | 'desc') => {
@@ -125,8 +134,9 @@ export default function Table<T>({
             sortedData.map((row, rowIndex) => (
               <tr
                 key={rowIndex}
-                id={getRowId ? getRowId(row, rowIndex) : undefined} // 여기서 id 부여
+                id={getRowId ? getRowId(row, rowIndex) : undefined}
                 className="border-b border-gray-200 hover:bg-gray-50 hover:cursor-pointer transition-colors"
+                onClick={() => handleRowClick(row)}
               >
                 {/* 즐겨찾기 셀 */}
                 {showFavorite && (

@@ -13,6 +13,7 @@ import { SelectDate } from '@/components/features/apm/services/SelectDate';
 import { useQuery } from '@tanstack/react-query';
 import { getServices } from '@/src/api/apm';
 import { ApmService, ServiceType } from '@/types/apm';
+import { useRouter } from 'next/navigation';
 
 // 서비스 타입별 아이콘 렌더링 함수
 const renderServiceIcon = (type: ServiceType) => {
@@ -92,6 +93,7 @@ const columns = [
 ];
 
 export default function ServicesPage() {
+  const router = useRouter();
   const [viewType, setViewType] = useState<'list' | 'map'>('list');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -110,6 +112,11 @@ export default function ServicesPage() {
   // 페이지 변경 핸들러
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
+
+  // 테이블 행 클릭 핸들러
+  const handleServiceRowClick = (service: ApmService) => {
+    router.push(`/apm/services/${service.service_name}`);
+  };
 
   // 로딩 상태
   if (isLoading) {
@@ -157,7 +164,12 @@ export default function ServicesPage() {
 
       {viewType === 'list' ? (
         <>
-          <Table<ApmService> columns={columns} data={services} showFavorite={true} />
+          <Table<ApmService>
+            columns={columns}
+            data={services}
+            showFavorite={true}
+            onRowClick={handleServiceRowClick}
+          />
           <Pagination page={page} totalPages={totalPages} onPrev={handlePrev} onNext={handleNext} />
         </>
       ) : (
