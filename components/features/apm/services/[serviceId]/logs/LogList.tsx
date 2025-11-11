@@ -1,6 +1,6 @@
 // 에러 로그 목록 => 로그 목록 전체 + 상태 관리
 
-import type { LogEntry } from '../../../../../../types/LogsTypes';
+import type { LogEntry } from '@/types/apm';
 import LogItem from './LogItem';
 
 export default function LogList({ items }: { items: LogEntry[] }) {

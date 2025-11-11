@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { FiAlertOctagon } from 'react-icons/fi';
 import { BiBug, BiGridAlt } from 'react-icons/bi';
 import SearchInput from '@/components/ui/SearchInput';
@@ -8,92 +9,69 @@ import Table from '@/components/ui/Table';
 import DatabaseIcon from '@/components/icons/services/Database';
 import FrontendIcon from '@/components/icons/services/Frontend';
 import ApiIcon from '@/components/icons/services/Api';
+import { getServices, getIssues } from '@/src/api/apm';
 
-type ServiceType = 'DB' | 'Frontend' | 'API';
-
-interface ApmService {
-  type: ServiceType;
-  service: string;
-  requests: number;
-  latency: number;
-  errorRate: number;
-}
-
-// 서비스 타입별 아이콘 렌더링 함수
-const renderServiceIcon = (type: ServiceType) => {
-  switch (type) {
-    case 'DB':
-      return <DatabaseIcon size={20} color="#3b82f6" />;
-    case 'Frontend':
-      return <FrontendIcon size={20} color="#8b5cf6" />;
-    case 'API':
-      return <ApiIcon size={20} color="#10b981" />;
-    default:
-      return null;
-  }
+// 서비스 타입별 아이콘 매핑
+const SERVICE_TYPE_ICONS: Record<string, { icon: typeof DatabaseIcon; color: string }> = {
+  DB: { icon: DatabaseIcon, color: '#3b82f6' },
+  CACHE: { icon: DatabaseIcon, color: '#06b6d4' },
+  API: { icon: ApiIcon, color: '#10b981' },
+  API_GATEWAY: { icon: ApiIcon, color: '#8b5cf6' },
+  WORKER: { icon: ApiIcon, color: '#f59e0b' },
+  WEB: { icon: FrontendIcon, color: '#8b5cf6' },
 };
 
-// 임시 데이터 (추후 API로 대체)
-const services: ApmService[] = [
-  {
-    type: 'API',
-    service: 'user-service',
-    requests: 12453,
-    latency: 125,
-    errorRate: 0.5,
-  },
-  {
-    type: 'DB',
-    service: 'payment-db',
-    requests: 8234,
-    latency: 230,
-    errorRate: 1.2,
-  },
-  {
-    type: 'Frontend',
-    service: 'web-app',
-    requests: 5621,
-    latency: 340,
-    errorRate: 3.8,
-  },
-];
+const renderServiceIcon = (type: string) => {
+  const config = SERVICE_TYPE_ICONS[type] || SERVICE_TYPE_ICONS.API;
+  const IconComponent = config.icon;
+  return <IconComponent size={20} color={config.color} />;
+};
+
+// Table Column 정의 (API 응답 기반)
+interface TableService {
+  service_type: string;
+  service_name: string;
+  request_count: number;
+  p95_latency_ms: number;
+  error_rate: number;
+}
 
 const columns = [
   {
-    key: 'type' as keyof ApmService,
+    key: 'service_type' as keyof TableService,
     header: 'Type',
     width: '20%',
-    render: (_value: ApmService[keyof ApmService], row: ApmService) => (
+    render: (_value: TableService[keyof TableService], row: TableService) => (
       <div className="flex items-center gap-2">
-        {renderServiceIcon(row.type)}
-        <span className="text-sm text-gray-600">{row.type}</span>
+        {renderServiceIcon(row.service_type)}
+        <span className="text-sm text-gray-600">{row.service_type}</span>
       </div>
     ),
   },
   {
-    key: 'service' as keyof ApmService,
+    key: 'service_name' as keyof TableService,
     header: 'Service',
     width: '25%',
   },
   {
-    key: 'requests' as keyof ApmService,
+    key: 'request_count' as keyof TableService,
     header: 'Requests',
     width: '20%',
-    render: (value: ApmService[keyof ApmService]) => (value as number).toLocaleString(),
+    render: (value: TableService[keyof TableService]) => (value as number).toLocaleString(),
   },
   {
-    key: 'latency' as keyof ApmService,
-    header: 'P99 Latency',
+    key: 'p95_latency_ms' as keyof TableService,
+    header: 'P95 Latency',
     width: '15%',
-    render: (value: ApmService[keyof ApmService]) => (
+    render: (value: TableService[keyof TableService]) => (
       <span className="flex items-center gap-1">{value as number}ms</span>
     ),
   },
   {
-    key: 'errorRate' as keyof ApmService,
+    key: 'error_rate' as keyof TableService,
     header: 'Error Rate',
     width: '15%',
-    render: (value: ApmService[keyof ApmService]) => (
+    render: (value: TableService[keyof TableService]) => (
       <span className={(value as number) > 2 ? 'text-red-600 font-semibold' : ''}>
         {value as number}%
       </span>
@@ -103,6 +81,32 @@ const columns = [
 
 export default function ApmPage() {
   const [searchQuery, setSearchQuery] = useState('');
+
+  // 타임스탬프는 useMemo로 안정화
+  const timeRange = useMemo(() => {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    return {
+      start_time: oneHourAgo.toISOString(),
+      end_time: now.toISOString(),
+    };
+  }, []);
+
+  const { data: servicesData, isLoading: servicesLoading } = useQuery({
+    queryKey: ['services', timeRange],
+    queryFn: () => getServices(timeRange),
+  });
+
+  const { data: issuesData, isLoading: issuesLoading } = useQuery({
+    queryKey: ['issues'],
+    queryFn: getIssues,
+  });
+
+  // 검색 필터링
+  const filteredServices =
+    servicesData?.services.filter((service) =>
+      service.service_name.toLowerCase().includes(searchQuery.toLowerCase()),
+    ) || [];
 
   return (
     <>
@@ -134,16 +138,20 @@ export default function ApmPage() {
           </div>
 
           {/* Table */}
-          {services.length === 0 ? (
+          {servicesLoading ? (
+            <div className="px-4 py-16 flex items-center justify-center">
+              <p className="text-gray-400 text-sm">Loading services...</p>
+            </div>
+          ) : filteredServices.length === 0 ? (
             <div className="px-4 py-16 flex flex-col items-center justify-center text-center">
               <FiAlertOctagon className="w-12 h-12 mb-3 text-purple-400" />
               <p className="text-gray-600 text-sm">No services match the filter</p>
               <p className="text-xs text-gray-400 mt-1">Please widen your filter</p>
             </div>
           ) : (
-            <Table<ApmService>
+            <Table<TableService>
               columns={columns}
-              data={services}
+              data={filteredServices}
               showFavorite={true}
               className="w-full"
             />
@@ -160,11 +168,36 @@ export default function ApmPage() {
             </div>
           </div>
 
-          {/* Empty State */}
-          <div className="px-4 py-16 flex flex-col items-center justify-center text-center">
-            <FiAlertOctagon className="w-12 h-12 mb-3 text-purple-400" />
-            <p className="text-gray-600 text-sm">No matching results found</p>
-          </div>
+          {/* Content */}
+          {issuesLoading ? (
+            <div className="px-4 py-16 flex items-center justify-center">
+              <p className="text-gray-400 text-sm">Loading issues...</p>
+            </div>
+          ) : issuesData && issuesData.issues.length > 0 ? (
+            <div className="divide-y divide-gray-100">
+              {issuesData.issues.map((issue) => (
+                <div key={issue.issue_id} className="px-4 py-3 hover:bg-gray-50">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{issue.message}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Service: {issue.service_name} • Affected:{' '}
+                        {issue.affected_requests.toLocaleString()} requests
+                      </p>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {new Date(issue.occurred_at).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 py-16 flex flex-col items-center justify-center text-center">
+              <FiAlertOctagon className="w-12 h-12 mb-3 text-purple-400" />
+              <p className="text-gray-600 text-sm">No matching results found</p>
+            </div>
+          )}
         </div>
       </div>
     </>

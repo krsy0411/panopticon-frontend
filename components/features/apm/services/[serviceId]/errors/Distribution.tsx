@@ -4,24 +4,38 @@
 import dynamic from 'next/dynamic';
 import React from 'react';
 import { EChartsOption } from 'echarts';
-import { mockErrorResponse } from './mock';
-import { ErrorItem } from '../../../../../../types/ErrorsTypes';
+
 import Table from '@/components/ui/Table';
+import { useQuery } from '@tanstack/react-query';
+import { getServiceErrors } from '@/src/api/apm';
+import { useTimeRangeStore } from '@/src/store/timeRangeStore';
+import { ErrorItem } from '@/types/apm';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
-export default function ErrorDistribution() {
-  const { errors } = mockErrorResponse;
+interface ErrorDistributionProps {
+  serviceName: string;
+}
+
+export default function ErrorDistribution({ serviceName }: ErrorDistributionProps) {
+  const { startTime, endTime } = useTimeRangeStore();
+
+  const { data: errorData } = useQuery({
+    queryKey: ['serviceErrors', serviceName, startTime, endTime],
+    queryFn: () => getServiceErrors(serviceName, { start_time: startTime, end_time: endTime }),
+  });
+
+  const errors = errorData?.errors || [];
   const resources = [...new Set(errors.map((e) => e.resource))];
   const services = [...new Set(errors.map((e) => e.service_name))];
 
   // Heatmap 데이터
-  const data: [number, number, number][] = errors.map((e) => [
+  const heatmapData: [number, number, number][] = errors.map((e) => [
     resources.indexOf(e.resource),
     services.indexOf(e.service_name),
     e.count,
   ]);
-  const maxCount = Math.max(...errors.map((e) => e.count));
+  const maxCount = Math.max(...errors.map((e) => e.count), 0);
 
   // Heatmap 옵션
   const option: EChartsOption = {
@@ -62,7 +76,7 @@ export default function ErrorDistribution() {
       {
         name: 'Error Distribution',
         type: 'heatmap',
-        data,
+        data: heatmapData,
         label: {
           show: true,
           formatter: (p) => {

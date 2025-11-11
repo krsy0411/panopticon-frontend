@@ -1,6 +1,6 @@
 // 에러 카드 1개 => UI 스타일만 담당
 
-import type { StatItem } from '../../types/LogsTypes';
+import type { StatItem } from '@/types/apm';
 import { BiErrorCircle } from 'react-icons/bi';
 import { AiOutlineWarning } from 'react-icons/ai';
 import { FiInfo, FiList } from 'react-icons/fi';

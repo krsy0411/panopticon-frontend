@@ -1,69 +1,42 @@
 'use client';
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getServiceMetrics } from '@/src/api/apm';
+import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
 interface ChartsProps {
-  timeRange: string;
+  serviceName: string;
 }
 
-export default function ChartsSection({ timeRange }: ChartsProps) {
-  const [isLoading, setIsLoading] = useState(false);
+export default function ChartsSection({ serviceName }: ChartsProps) {
+  // Zustand store에서 시간 정보 가져오기
+  const { startTime, endTime, interval } = useTimeRangeStore();
 
-  // latency의 초기값을 실제 사용하는 구조와 동일하게 맞춤
-  const initialLatency = {
-    p50: Array(10).fill(0),
-    p75: Array(10).fill(0),
-    p90: Array(10).fill(0),
-    p95: Array(10).fill(0),
-    p99: Array(10).fill(0),
-    p99_9: Array(10).fill(0),
-    max: Array(10).fill(0),
-  };
-
-  const [chartData, setChartData] = useState({
-    timestamps: generateTimestamps('5m'),
-    requests: Array(10).fill(0),
-    errors: Array(10).fill(0),
-    latency: initialLatency,
+  // API 데이터 가져오기
+  const { data, isLoading } = useQuery({
+    queryKey: ['serviceMetrics', serviceName, startTime, endTime, interval],
+    queryFn: () =>
+      getServiceMetrics(serviceName, {
+        start_time: startTime,
+        end_time: endTime,
+        interval: interval,
+      }),
   });
 
-  /* ------- API 호출 => 현재 더미 데이터(변경 필요) -------- */
-  const fetchChartData = useCallback(async (range: string) => {
-    setIsLoading(true);
-
-    await new Promise((res) => setTimeout(res, 400)); // 로딩 딜레이 시뮬레이션
-
-    const timestamps = generateTimestamps(range);
-    const rand = (base: number, amp = 2000) =>
-      timestamps.map(() => Math.max(0, base + Math.floor((Math.random() - 0.5) * amp)));
-
-    setChartData({
-      timestamps,
-      requests: rand(25000, 15000),
-      errors: rand(10, 10),
-      latency: {
-        p50: rand(120, 40),
-        p75: rand(160, 50),
-        p90: rand(220, 60),
-        p95: rand(280, 70),
-        p99: rand(350, 80),
-        p99_9: rand(400, 90),
-        max: rand(450, 100),
-      },
-    });
-
-    setIsLoading(false);
-  }, []);
-
-  // 기간 변경 시 데이터 다시 불러오기 (1회만)
-  useEffect(() => {
-    const loadData = async () => {
-      await fetchChartData(timeRange);
-    };
-    loadData();
-  }, [timeRange, fetchChartData]);
+  // 차트 데이터 변환
+  const chartData = {
+    timestamps:
+      data?.data.latency.map((item) => formatDateLabel(new Date(item.timestamp), interval)) || [],
+    requests: data?.data.requests_and_errors.map((item) => item.hits) || [],
+    errors: data?.data.requests_and_errors.map((item) => item.errors) || [],
+    latency: {
+      p90: data?.data.latency.map((item) => item.p90) || [],
+      p95: data?.data.latency.map((item) => item.p95) || [],
+      p99_9: data?.data.latency.map((item) => item.p99_9) || [],
+    },
+  };
 
   /* -------------------- 차트 공통 스타일 ------------------ */
   const baseStyle = {
@@ -186,12 +159,13 @@ export default function ChartsSection({ timeRange }: ChartsProps) {
       textStyle: { color: '#f9fafb', fontSize: 12 },
       padding: 6,
       formatter: (params: unknown) => {
-        const list = params as {
+        interface TooltipParam {
           axisValue: string;
           color: string;
           seriesName: string;
           value: number;
-        }[];
+        }
+        const list = params as TooltipParam[];
         if (!list?.length) return '';
         const header = `<div style="margin-bottom:4px;"><b>${list[0].axisValue}</b></div>`;
         const lines = list
@@ -204,22 +178,6 @@ export default function ChartsSection({ timeRange }: ChartsProps) {
       },
     },
     series: [
-      {
-        name: 'p50',
-        type: 'line',
-        data: chartData.latency.p50,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#2563eb' },
-      },
-      {
-        name: 'p75',
-        type: 'line',
-        data: chartData.latency.p75,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#7c3aed' },
-      },
       {
         name: 'p90',
         type: 'line',
@@ -237,25 +195,9 @@ export default function ChartsSection({ timeRange }: ChartsProps) {
         lineStyle: { width: 2, color: '#facc15' },
       },
       {
-        name: 'p99',
-        type: 'line',
-        data: chartData.latency.p99,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#f97316' },
-      },
-      {
         name: 'p99.9',
         type: 'line',
         data: chartData.latency.p99_9,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#eab308' },
-      },
-      {
-        name: 'Max',
-        type: 'line',
-        data: chartData.latency.max,
         smooth: true,
         symbol: 'none',
         lineStyle: { width: 2, color: '#ef4444' },
@@ -288,19 +230,6 @@ export default function ChartsSection({ timeRange }: ChartsProps) {
 /* -------------------------------
    헬퍼 함수
 --------------------------------*/
-function generateTimestamps(range: string): string[] {
-  const now = new Date();
-  const ts: string[] = [];
-  for (let i = 9; i >= 0; i--) {
-    const t = new Date(now);
-    if (['5m', '30m', '1h'].includes(range)) t.setSeconds(now.getSeconds() - i * 10);
-    else if (['1d', '1w'].includes(range)) t.setHours(now.getHours() - i * 3);
-    else t.setDate(now.getDate() - i * 4);
-    ts.push(formatDateLabel(t, range));
-  }
-  return ts;
-}
-
 function formatDateLabel(date: Date, range: string): string {
   if (['5m', '30m', '1h'].includes(range)) {
     return date.toLocaleTimeString('en-US', {

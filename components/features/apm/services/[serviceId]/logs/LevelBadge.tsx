@@ -1,6 +1,6 @@
 // ERROR, WARNING, INFO 값에 따라 색상 + 아이콘 다르게 표시
 
-import type { LogLevel } from '../../../../../../types/LogsTypes';
+import type { LogLevel } from '@/types/apm';
 import { BiErrorCircle } from 'react-icons/bi';
 import { AiOutlineWarning } from 'react-icons/ai';
 import { FiInfo } from 'react-icons/fi';

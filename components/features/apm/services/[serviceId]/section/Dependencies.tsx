@@ -1,21 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { useQuery } from '@tanstack/react-query';
+import { getServiceDependencies } from '@/src/api/apm';
+import { DependencyRequest } from '@/types/apm';
+import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
-// API 응답 타입
-interface DependencyRequest {
-  service_name: string;
-  total_requests: number;
-  error_rate: number;
-}
-
-interface DependencyResponse {
-  service_name: string;
-  incoming_requests: DependencyRequest[];
-  outgoing_requests: DependencyRequest[];
+interface DependenciesSectionProps {
+  serviceName: string;
 }
 
 interface ChartParams {
@@ -114,73 +109,26 @@ const getErrorColor = (errorRate: number): string => {
   return COLORS.errorRate.low;
 };
 
-export default function DependenciesSection() {
-  const [dependencies, setDependencies] = useState<DependencyResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function DependenciesSection({ serviceName }: DependenciesSectionProps) {
+  // Zustand store에서 시간 정보 가져오기
+  const { startTime, endTime } = useTimeRangeStore();
 
   // 시간 범위 (1시간 = 3600초)
   const timeRangeInSeconds = 3600;
 
-  // API 호출 함수
-  const fetchDependencies = useCallback(async () => {
-    try {
-      // TODO: 실제 API 엔드포인트로 교체 필요
-      // const serviceId = window.location.pathname.split('/').pop();
-      // const now = new Date();
-      // const startTime = new Date(now.getTime() - timeRangeInSeconds * 1000).toISOString();
-      // const endTime = now.toISOString();
-      // const response = await fetch(
-      //   `/api/apm/services/${serviceId}/dependencies?start_time=${startTime}&end_time=${endTime}`
-      // );
-
-      // 임시: 더미 데이터 생성
-      const mockResponse: DependencyResponse = {
-        service_name: 'user-service',
-        incoming_requests: [
-          {
-            service_name: 'api-gateway',
-            total_requests: 54000,
-            error_rate: 0.5,
-          },
-          {
-            service_name: 'admin-service',
-            total_requests: 12000,
-            error_rate: 0.3,
-          },
-        ],
-        outgoing_requests: [
-          {
-            service_name: 'database',
-            total_requests: 162000,
-            error_rate: 0.1,
-          },
-          {
-            service_name: 'cache-service',
-            total_requests: 108000,
-            error_rate: 0.05,
-          },
-          {
-            service_name: 'payment-service',
-            total_requests: 45000,
-            error_rate: 0.8,
-          },
-        ],
-      };
-
-      setDependencies(mockResponse);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch dependencies');
-      console.error('Error fetching dependencies:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchDependencies();
-  }, [fetchDependencies]);
+  // API 데이터 가져오기
+  const {
+    data: dependencies,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['serviceDependencies', serviceName, startTime, endTime],
+    queryFn: () =>
+      getServiceDependencies(serviceName, {
+        start_time: startTime,
+        end_time: endTime,
+      }),
+  });
 
   // ECharts 옵션 생성
   const chartOption = useMemo(() => {
@@ -203,7 +151,7 @@ export default function DependenciesSection() {
     });
 
     // Incoming 서비스들 (좌측 배치)
-    incomingRequests.forEach((req, idx) => {
+    incomingRequests.forEach((req: DependencyRequest, idx: number) => {
       const yPosition = 20 + (idx * 60) / Math.max(incomingRequests.length - 1, 1);
       nodes.push({
         name: req.service_name,
@@ -222,7 +170,7 @@ export default function DependenciesSection() {
     });
 
     // Outgoing 서비스들 (우측 배치)
-    outgoingRequests.forEach((req, idx) => {
+    outgoingRequests.forEach((req: DependencyRequest, idx: number) => {
       const yPosition = 20 + (idx * 60) / Math.max(outgoingRequests.length - 1, 1);
       nodes.push({
         name: req.service_name,
@@ -313,7 +261,9 @@ export default function DependenciesSection() {
               color:
                 node.name === currentService
                   ? COLORS.node.current
-                  : incomingRequests.some((req) => req.service_name === node.name)
+                  : incomingRequests.some(
+                      (req: DependencyRequest) => req.service_name === node.name,
+                    )
                   ? COLORS.node.incoming
                   : COLORS.node.outgoing,
               borderColor: COLORS.border,
@@ -348,7 +298,7 @@ export default function DependenciesSection() {
       <div className="bg-white p-5 rounded-lg border border-gray-200">
         <div className="text-center text-red-500 py-8">
           <p className="font-semibold mb-2">Error loading dependencies</p>
-          <p className="text-sm">{error}</p>
+          <p className="text-sm">{error instanceof Error ? error.message : 'Unknown error'}</p>
         </div>
       </div>
     );
@@ -416,7 +366,7 @@ export default function DependenciesSection() {
             <div>
               <h3 className="text-md font-semibold text-gray-800 mb-3">Incoming Requests</h3>
               <div className="space-y-2 max-h-96 overflow-y-auto">
-                {dependencies.incoming_requests.map((req) => (
+                {dependencies.incoming_requests.map((req: DependencyRequest) => (
                   <div
                     key={req.service_name}
                     className="p-3 bg-gray-50 rounded-lg hover:cursor-pointer" // TODO: 추후 클릭 시 상세 정보 표시 기능 추가 예정
@@ -456,7 +406,7 @@ export default function DependenciesSection() {
             <div>
               <h3 className="text-md font-semibold text-gray-800 mb-3">Outgoing Requests</h3>
               <div className="space-y-2 max-h-96 overflow-y-auto">
-                {dependencies.outgoing_requests.map((req) => (
+                {dependencies.outgoing_requests.map((req: DependencyRequest) => (
                   <div
                     key={req.service_name}
                     className="p-3 bg-gray-50 rounded-lg hover:cursor-pointer" // TODO: 추후 클릭 시 상세 정보 표시 기능 추가 예정

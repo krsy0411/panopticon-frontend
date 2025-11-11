@@ -1,30 +1,17 @@
 'use client';
 import Table from '@/components/ui/Table';
 import Pagination from '@/components/features/apm/services/Pagination';
-import PageSizeSelect from '@/components/features/apm/services/PageSizeSelect';
 import dynamic from 'next/dynamic';
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getServiceTraces } from '@/src/api/apm';
+import { Trace } from '@/types/apm';
+import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
-// API 응답 타입
-interface TraceResponse {
-  traces: Trace[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-interface Trace {
-  trace_id: string;
-  date: string; // ISO 8601 format
-  resource: string;
-  service: string;
-  duration_ms: number;
-  method: string;
-  status_code: number;
-  span_count: number;
-  error: boolean;
+interface TracesSectionProps {
+  serviceName: string;
 }
 
 // 차트용 데이터 포인트 타입
@@ -119,13 +106,12 @@ const TRACE_TABLE_COLUMNS: Array<{
 // Trace를 TracePoint로 변환
 function transformTraceToPoint(trace: Trace): TracePoint {
   const date = new Date(trace.date);
+  const timestamp = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(
+    2,
+    '0',
+  )}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
   return {
-    timestamp: date.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    }),
+    timestamp,
     duration: trace.duration_ms,
     latencyBreakdown: trace.duration_ms, // duration과 동일한 값
     status: trace.error || trace.status_code >= 400 ? 'error' : 'success',
@@ -136,85 +122,42 @@ function transformTraceToPoint(trace: Trace): TracePoint {
   };
 }
 
-export default function TracesSection() {
-  const [traces, setTraces] = useState<TracePoint[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [totalCount, setTotalCount] = useState(0);
+export default function TracesSection({ serviceName }: TracesSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(30); // 한 페이지에 보여줄 항목 수
+  const itemsPerPage = 15; // 페이지당 15개 고정
 
-  // API 호출 함수 (페이지네이션 반영)
-  const fetchTraces = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      // TODO: 실제 API 엔드포인트로 교체 필요
-      // const serviceId = window.location.pathname.split('/').pop();
-      // const response = await fetch(`/api/apm/services/${serviceId}/traces?page=${currentPage}&limit=${itemsPerPage}`);
+  // Zustand store에서 시간 정보 가져오기
+  const { startTime, endTime } = useTimeRangeStore();
 
-      // 임시: 더미 데이터 생성 (페이지네이션 반영)
-      const startIndex = (currentPage - 1) * itemsPerPage;
-      const mockResponse: TraceResponse = {
-        traces: Array.from({ length: itemsPerPage }, (_, i) => {
-          const status_code = [200, 201, 400, 500][Math.floor(Math.random() * 4)];
-          let error = false;
-          if (status_code >= 400) {
-            error = true;
-          } else {
-            error = false;
-          }
-          return {
-            trace_id: `trace_${startIndex + i}_${Date.now()}`,
-            date: new Date(Date.now() - Math.random() * 300000).toISOString(),
-            resource: [
-              `GET /api/users/${startIndex + i}`,
-              `POST /api/orders`,
-              `GET /api/products/${startIndex + i}`,
-            ][Math.floor(Math.random() * 3)],
-            service: ['user-service', 'order-service', 'product-service'][
-              Math.floor(Math.random() * 3)
-            ],
-            duration_ms: Math.floor(Math.random() * 2000) + 50,
-            method: ['GET', 'POST', 'PUT'][Math.floor(Math.random() * 3)],
-            status_code,
-            span_count: Math.floor(Math.random() * 10) + 1,
-            error,
-          };
-        }),
-        total: 1234,
-        page: currentPage,
-        limit: itemsPerPage,
-      };
+  // 모든 트레이스 데이터 가져오기 (그래프 및 테이블 공용)
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['serviceTraces', serviceName, startTime, endTime],
+    queryFn: () =>
+      getServiceTraces(serviceName, {
+        start_time: startTime,
+        end_time: endTime,
+        page: 1,
+        limit: 1000,
+      }), // 충분히 큰 limit으로 모든 데이터 가져오기
+  });
 
-      // 실제 API 사용 시:
-      // if (!response.ok) {
-      //   throw new Error(`HTTP error! status: ${response.status}`);
-      // }
-      // const data: TraceResponse = await response.json();
+  // 전체 트레이스 데이터 변환 (최신순 정렬)
+  const allTraces = useMemo(() => {
+    if (!data?.traces) return [];
+    const sortedTraces = [...data.traces].sort(
+      (a: Trace, b: Trace) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+    return sortedTraces.map(transformTraceToPoint);
+  }, [data]);
 
-      const data = mockResponse;
+  const totalCount = allTraces.length;
 
-      let transformedTraces = data.traces.map(transformTraceToPoint);
-      // error=true가 먼저 오도록 정렬
-      transformedTraces = transformedTraces.sort((a, b) => {
-        if (a.status === b.status) return 0;
-        return a.status === 'error' ? -1 : 1;
-      });
-      setTraces(transformedTraces);
-      setTotalCount(data.total);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch traces');
-      console.error('Error fetching traces:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, itemsPerPage]);
-
-  useEffect(() => {
-    // currentPage, itemsPerPage 변경 시마다 데이터 로드
-    fetchTraces();
-  }, [fetchTraces]);
+  // 현재 페이지의 데이터만 추출 (테이블용)
+  const traces = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return allTraces.slice(startIndex, endIndex);
+  }, [allTraces, currentPage, itemsPerPage]);
 
   // 상태별 색상 매핑
   const getColorByStatus = (status: string) => {
@@ -228,13 +171,19 @@ export default function TracesSection() {
     }
   };
 
-  // 상태별로 데이터 분리
-  const successTraces = traces
-    .filter((t) => t.status === 'success')
-    .map((t) => [t.timestamp, t.duration]);
-  const errorTraces = traces
-    .filter((t) => t.status === 'error')
-    .map((t) => [t.timestamp, t.duration]);
+  // 상태별로 데이터 분리 (그래프는 모든 트레이스 사용, x축은 시간만 표시)
+  const successTraces = allTraces
+    .filter((t: TracePoint) => t.status === 'success')
+    .map((t: TracePoint) => {
+      const timeOnly = t.timestamp.split(' ')[1]; // "12/31 00:00:00" -> "00:00:00"
+      return [timeOnly, t.duration];
+    });
+  const errorTraces = allTraces
+    .filter((t: TracePoint) => t.status === 'error')
+    .map((t: TracePoint) => {
+      const timeOnly = t.timestamp.split(' ')[1]; // "12/31 00:00:00" -> "00:00:00"
+      return [timeOnly, t.duration];
+    });
 
   const option = {
     backgroundColor: 'transparent',
@@ -276,7 +225,9 @@ export default function TracesSection() {
       formatter: (params: { value: [string, number]; seriesName: string; dataIndex: number }) => {
         const [time, duration] = params.value;
         const status = params.seriesName;
-        const trace = traces.filter((t) => t.status === status.toLowerCase())[params.dataIndex];
+        const trace = allTraces.filter((t: TracePoint) => t.status === status.toLowerCase())[
+          params.dataIndex
+        ];
 
         if (!trace) return '';
 
@@ -347,12 +298,6 @@ export default function TracesSection() {
   // 페이지 계산
   const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
 
-  // 페이지 크기 변경 핸들러
-  const handlePageSizeChange = (newSize: number) => {
-    setItemsPerPage(newSize);
-    setCurrentPage(1); // 페이지 크기 변경 시 첫 페이지로 리셋
-  };
-
   // 페이지네이션 핸들러
   const handlePrevPage = () => {
     if (currentPage > 1) {
@@ -371,13 +316,13 @@ export default function TracesSection() {
       <div className="bg-white p-5 rounded-lg border border-gray-200">
         <div className="text-center text-red-500 py-8">
           <p className="font-semibold mb-2">Error loading traces</p>
-          <p className="text-sm">{error}</p>
+          <p className="text-sm">{error instanceof Error ? error.message : 'Unknown error'}</p>
         </div>
       </div>
     );
   }
 
-  if (isLoading && traces.length === 0) {
+  if (isLoading && allTraces.length === 0) {
     return (
       <div className="bg-white p-5 rounded-lg border border-gray-200">
         <div className="text-center text-gray-500 py-8">Loading traces...</div>
@@ -389,13 +334,6 @@ export default function TracesSection() {
     <div className="bg-white p-5 rounded-lg border border-gray-200">
       {/* 차트 */}
       <ReactECharts option={option} style={{ height: 400 }} />
-      <div className="mt-4 flex justify-between items-center text-sm text-gray-600">
-        <PageSizeSelect
-          value={itemsPerPage}
-          onChange={handlePageSizeChange}
-          options={[10, 30, 50]}
-        />
-      </div>
 
       {/* 테이블 */}
       <div className="mt-6">

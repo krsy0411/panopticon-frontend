@@ -1,6 +1,6 @@
 /// 에러 로그 1개 => UI 스타일만 담당
 
-import type { LogEntry } from '../../../../../../types/LogsTypes';
+import type { LogEntry } from '@/types/apm';
 import LevelBadge from './LevelBadge';
 
 export default function LogItem({ item }: { item: LogEntry }) {

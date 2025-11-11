@@ -25,6 +25,9 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          # 프로덕션 빌드에서는 MSW 완전 비활성화
+          NEXT_PUBLIC_ENABLE_MOCKING: false
         run: npm run build
 
       - name: Deploy to S3

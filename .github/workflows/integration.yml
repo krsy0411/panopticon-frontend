@@ -36,4 +36,7 @@ jobs:
         run: npm run lint:ci
 
       - name: Build
+        env:
+          # 통합 테스트에서는 MSW를 비활성화 (실제 빌드 검증)
+          NEXT_PUBLIC_ENABLE_MOCKING: false
         run: npm run build

@@ -1,6 +1,6 @@
 // 더미 데이터
 
-import type { LogEntry, StatItem } from '../../../../../../types/LogsTypes';
+import { LogEntry, StatItem } from '@/types/apm';
 
 /*상단 카드용 더미 통계*/
 export const mockStats: StatItem[] = [
