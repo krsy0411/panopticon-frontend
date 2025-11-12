@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import Button from '@/components/ui/BaseButton';
+import Button from '@/components/ui/Button';
 import Logo from '@/components/icons/Logo';
 import { FaGithub } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
@@ -11,12 +11,12 @@ export default function LoginPage() {
 
   const handleGithubLogin = () => {
     // TODO: GitHub OAuth 연동
-    router.push('/main');
+    router.push('/apm');
   };
 
   const handleGoogleLogin = () => {
     // TODO: Google OAuth 연동
-    router.push('/main');
+    router.push('/apm');
   };
 
   return (

@@ -2,23 +2,44 @@
 
 import React, { useState } from 'react';
 import { FiChevronUp, FiChevronDown } from 'react-icons/fi';
+import Star from '../icons/Star';
 
 interface TableColumn<T> {
   key: keyof T;
   header: string;
   render?: (value: T[keyof T], row: T) => React.ReactNode;
   width?: `${number}%` | string; // 예: '20%', '50%'
+  sortable?: boolean; // 정렬 가능 여부
 }
 
 interface TableProps<T> {
   columns: TableColumn<T>[];
   data: T[];
   className?: string;
+  showFavorite?: boolean; // 즐겨찾기 열 표시 여부
+  onFavoriteClick?: (row: T, index: number) => void; // 즐겨찾기 클릭 핸들러
+  getRowId?: (row: T, index: number) => string; // Errors List 하이라이트
+  onRowClick?: (row: T) => void; // 행 클릭 핸들러
 }
 
-export default function Table<T>({ columns, data, className = 'w-full' }: TableProps<T>) {
+export default function Table<T>({
+  columns,
+  data,
+  className = 'w-full',
+  showFavorite = false,
+  onFavoriteClick,
+  getRowId, // Errors List 하이라이트
+  onRowClick,
+}: TableProps<T>) {
   const [sortField, setSortField] = useState<keyof T | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // 행 클릭 핸들러
+  const handleRowClick = (row: T) => {
+    if (onRowClick) {
+      onRowClick(row);
+    }
+  };
 
   // 정렬 함수
   const getComparator = (key: keyof T, direction: 'asc' | 'desc') => {
@@ -47,34 +68,53 @@ export default function Table<T>({ columns, data, className = 'w-full' }: TableP
   // 정렬된 데이터 계산
   const sortedData = sortField ? [...data].sort(getComparator(sortField, sortDirection)) : data;
 
+  // 정렬 핸들러
+  const handleSort = (column: TableColumn<T>) => {
+    if (column.sortable === false) return;
+
+    if (sortField === column.key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(column.key);
+      setSortDirection('desc'); // 첫 정렬 시 내림차순(아래 화살표)으로 시작
+    }
+  };
+
   return (
     <div className={`overflow-x-auto ${className}`}>
       <table className="min-w-full border-collapse table-fixed">
         <thead>
           <tr className="border-b border-gray-200">
+            {/* 즐겨찾기 열 */}
+            {showFavorite && (
+              <th
+                className="px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 w-12"
+                aria-label="favorite"
+              >
+                <Star className="w-4 h-4 text-black" />
+              </th>
+            )}
             {columns.map((column) => (
               <th
                 key={String(column.key)}
-                className="px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 select-none cursor-pointer"
+                className={`px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-gray-50 select-none ${
+                  column.sortable !== false ? 'cursor-pointer' : ''
+                }`}
                 style={{ width: column.width || 'auto' }}
-                onClick={() => {
-                  if (sortField === column.key) {
-                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                  } else {
-                    setSortField(column.key);
-                    setSortDirection('asc');
-                  }
-                }}
+                onClick={() => handleSort(column)}
               >
                 <span className="flex items-center gap-1">
                   {column.header}
-                  {sortField === column.key ? (
-                    sortDirection === 'asc' ? (
-                      <FiChevronUp className="w-4 h-4 text-gray-400" />
+                  {column.sortable !== false &&
+                    (sortField === column.key ? (
+                      sortDirection === 'asc' ? (
+                        <FiChevronUp className="w-4 h-4 text-gray-400" />
+                      ) : (
+                        <FiChevronDown className="w-4 h-4 text-gray-400" />
+                      )
                     ) : (
-                      <FiChevronDown className="w-4 h-4 text-gray-400" />
-                    )
-                  ) : null}
+                      <FiChevronUp className="w-4 h-4 text-gray-400" />
+                    ))}
                 </span>
               </th>
             ))}
@@ -83,7 +123,10 @@ export default function Table<T>({ columns, data, className = 'w-full' }: TableP
         <tbody>
           {sortedData.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="px-4 py-8 text-center text-sm text-gray-500">
+              <td
+                colSpan={columns.length + (showFavorite ? 1 : 0)}
+                className="px-4 py-8 text-center text-sm text-gray-500"
+              >
                 데이터가 없습니다
               </td>
             </tr>
@@ -91,8 +134,19 @@ export default function Table<T>({ columns, data, className = 'w-full' }: TableP
             sortedData.map((row, rowIndex) => (
               <tr
                 key={rowIndex}
+                id={getRowId ? getRowId(row, rowIndex) : undefined}
                 className="border-b border-gray-200 hover:bg-gray-50 hover:cursor-pointer transition-colors"
+                onClick={() => handleRowClick(row)}
               >
+                {/* 즐겨찾기 셀 */}
+                {showFavorite && (
+                  <td
+                    className="px-4 py-3 text-sm"
+                    onClick={() => onFavoriteClick?.(row, rowIndex)}
+                  >
+                    <Star className="w-4 h-4 text-gray-400 hover:text-yellow-500 cursor-pointer" />
+                  </td>
+                )}
                 {columns.map((column) => (
                   <td
                     key={String(column.key)}

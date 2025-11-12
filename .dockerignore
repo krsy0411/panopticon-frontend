@@ -1,0 +1,17 @@
+.next
+node_modules
+out
+dist
+build
+.git
+.github
+Dockerfile
+docker-compose.yml
+*.log
+npm-debug.log*
+.env
+*.local
+
+# MSW 관련 파일 (개발 전용)
+mocks
+public/mockServiceWorker.js
