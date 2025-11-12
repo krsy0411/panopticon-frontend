@@ -20,6 +20,7 @@ interface TableProps<T> {
   onFavoriteClick?: (row: T, index: number) => void; // 즐겨찾기 클릭 핸들러
   getRowId?: (row: T, index: number) => string; // Errors List 하이라이트
   onRowClick?: (row: T) => void; // 행 클릭 핸들러
+  defaultSortDirection?: 'asc' | 'desc'; // 기본 정렬 방향
 }
 
 export default function Table<T>({
@@ -30,10 +31,11 @@ export default function Table<T>({
   onFavoriteClick,
   getRowId, // Errors List 하이라이트
   onRowClick,
+  defaultSortDirection = 'desc',
 }: TableProps<T>) {
   const [sortField, setSortField] = useState<keyof T | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
+  // 대부분의 APM 테이블은 최신순(내림차순) 기본값
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(defaultSortDirection);
   // 행 클릭 핸들러
   const handleRowClick = (row: T) => {
     if (onRowClick) {
@@ -76,7 +78,7 @@ export default function Table<T>({
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
       setSortField(column.key);
-      setSortDirection('desc'); // 첫 정렬 시 내림차순(아래 화살표)으로 시작
+      setSortDirection(defaultSortDirection); // Props의 기본값 존중
     }
   };
 
