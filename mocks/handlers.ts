@@ -104,7 +104,7 @@ export const handlers = [
         {
           issue_id: 'iss_123',
           service_name: 'payment-service',
-          message: 'Error rate exceeded 5%',
+          message: 'Error rate exceeded 10%',
           occurred_at: '2025-11-07T10:30:00Z',
           affected_requests: 1234,
         },
