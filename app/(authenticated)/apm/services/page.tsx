@@ -4,13 +4,14 @@ import Table from '@/components/ui/Table';
 import ViewModeSelectBox from '../../../../components/features/apm/services/ViewModeSelectBox';
 import PageSizeSelect from '../../../../components/features/apm/services/PageSizeSelect';
 import Pagination from '../../../../components/features/apm/services/Pagination';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import SearchInput from '@/components/ui/SearchInput';
 import { SelectDate } from '@/components/features/apm/services/SelectDate';
 import { useQuery } from '@tanstack/react-query';
 import { getServices } from '@/src/api/apm';
 import { ServiceSummary } from '@/types/apm';
 import { useRouter } from 'next/navigation';
+import StateHandler from '@/components/ui/StateHandler';
 
 const columns = [
   {
@@ -59,23 +60,23 @@ export default function ServicesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // 지난 한 달의 시간 범위 계산
-  const getLastMonthRange = () => {
+  // 지난 2주일의 시간 범위 (useMemo로 안정화)
+  const timeRange = useMemo(() => {
     const now = new Date();
-    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     return {
-      from: oneMonthAgo.toISOString(),
+      from: twoWeeksAgo.toISOString(),
       to: now.toISOString(),
     };
-  };
+  }, []);
 
   // API 데이터 가져오기
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['services', page, pageSize],
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['services', page, pageSize, timeRange],
     queryFn: () =>
       getServices({
         limit: pageSize,
-        ...getLastMonthRange(),
+        ...timeRange,
       }),
   });
 
@@ -83,6 +84,7 @@ export default function ServicesPage() {
   const services = data?.services || [];
   const total = services.length;
   const totalPages = Math.ceil(total / pageSize);
+  const isEmpty = services.length === 0;
 
   // 페이지 변경 핸들러
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
@@ -92,32 +94,6 @@ export default function ServicesPage() {
   const handleServiceRowClick = (service: ServiceSummary) => {
     router.push(`/apm/services/${service.service_name}`);
   };
-
-  // 로딩 상태
-  if (isLoading) {
-    return (
-      <div id="apm-services-container" className="p-8">
-        <h1 className="text-2xl font-bold mb-6">서비스 목록</h1>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">로딩 중...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // 에러 상태
-  if (isError) {
-    return (
-      <div id="apm-services-container" className="p-8">
-        <h1 className="text-2xl font-bold mb-6">서비스 목록</h1>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-red-500">
-            에러가 발생했습니다: {error instanceof Error ? error.message : '알 수 없는 에러'}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div id="apm-services-container" className="p-8">
@@ -138,7 +114,16 @@ export default function ServicesPage() {
       </div>
 
       {viewType === 'list' ? (
-        <>
+        <StateHandler
+          isLoading={isLoading}
+          isError={isError}
+          isEmpty={isEmpty}
+          type="table"
+          height={500}
+          loadingMessage="서비스 목록을 불러오는 중..."
+          errorMessage="서비스 목록을 불러올 수 없습니다"
+          emptyMessage="표시할 서비스가 없습니다"
+        >
           <Table<ServiceSummary>
             columns={columns}
             data={services}
@@ -146,7 +131,7 @@ export default function ServicesPage() {
             onRowClick={handleServiceRowClick}
           />
           <Pagination page={page} totalPages={totalPages} onPrev={handlePrev} onNext={handleNext} />
-        </>
+        </StateHandler>
       ) : (
         <div>맵 뷰 구현 예정...</div>
       )}
