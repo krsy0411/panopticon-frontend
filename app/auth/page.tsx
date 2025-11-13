@@ -11,12 +11,12 @@ export default function LoginPage() {
 
   const handleGithubLogin = () => {
     // TODO: GitHub OAuth 연동
-    router.push('/install');
+    router.push('/setting/install');
   };
 
   const handleGoogleLogin = () => {
     // TODO: Google OAuth 연동
-    router.push('/insatll');
+    router.push('/setting/insatll');
   };
 
   return (

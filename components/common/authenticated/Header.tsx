@@ -1,7 +1,6 @@
 import { SiGoogleanalytics } from 'react-icons/si';
-import { GrHostMaintenance } from 'react-icons/gr';
+import { FiBell, FiUser, FiSettings } from 'react-icons/fi';
 import { HeaderDropdown } from './HeaderDropdown';
-import { FiBell, FiUser } from 'react-icons/fi';
 import Logo from '@/components/icons/Logo';
 
 export const AuthenticatedHeader = () => {
@@ -14,12 +13,17 @@ export const AuthenticatedHeader = () => {
     },
   ];
 
-  // Agent 드롭다운 아이템
-  const agentItems = [
+  // Setting 드롭다운 아이템
+  const settingItems = [
     {
-      href: '/install',
+      href: '/setting/install',
       label: 'Install Agents',
       ariaLabel: 'Go to Install Agents page',
+    },
+    {
+      href: '/setting/register',
+      label: 'App Register',
+      ariaLabel: 'Go to App Register page',
     },
   ];
 
@@ -30,7 +34,7 @@ export const AuthenticatedHeader = () => {
           <Logo />
         </div>
 
-        {/* 오른쪽 아이콘들: APM, Agent 각각 드롭다운 */}
+        {/* 오른쪽 아이콘들: APM, Setting 각각 드롭다운 */}
         <div className="ml-auto flex items-center gap-6">
           <div className="flex items-center gap-5">
             <HeaderDropdown
@@ -41,11 +45,11 @@ export const AuthenticatedHeader = () => {
               items={apmItems}
             />
             <HeaderDropdown
-              triggerIcon={<GrHostMaintenance className="w-6 h-6 text-zinc-700" />}
-              triggerLabel="Agent menu"
-              triggerHref="/install"
-              title="Integration"
-              items={agentItems}
+              triggerIcon={<FiSettings className="w-6 h-6 text-zinc-700" />}
+              triggerLabel="Setting menu"
+              triggerHref="/setting/register"
+              title="Setting"
+              items={settingItems}
             />
           </div>
 

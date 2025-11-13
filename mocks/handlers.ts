@@ -94,6 +94,11 @@ export const handlers = [
     const url = new URL(request.url);
     const environment = url.searchParams.get('environment');
 
+    // traceId에서 에러 여부 판단 (trace-error-로 시작하면 에러 trace)
+    const isErrorTrace = (traceId as string).includes('error');
+    const httpStatusCode = isErrorTrace ? (Math.random() > 0.5 ? 500 : 404) : 200;
+    const spanStatus = isErrorTrace ? 'ERROR' : 'OK';
+
     const spans: SpanItem[] = [
       {
         timestamp: new Date(Date.now() - 1000).toISOString(),
@@ -101,13 +106,13 @@ export const handlers = [
         parent_span_id: null,
         name: 'GET /api/users',
         kind: 'SERVER',
-        duration_ms: 234.5,
-        status: 'OK',
+        duration_ms: isErrorTrace ? 512.3 : 234.5,
+        status: spanStatus,
         service_name: 'api-gateway',
         environment: environment || 'prod',
         http_method: 'GET',
         http_path: '/api/users',
-        http_status_code: 200,
+        http_status_code: httpStatusCode,
         labels: { version: '1.0.0' },
         db_statement: null,
       },
@@ -117,15 +122,17 @@ export const handlers = [
         parent_span_id: 'span-001',
         name: 'SELECT users',
         kind: 'CLIENT',
-        duration_ms: 180.2,
-        status: 'OK',
+        duration_ms: isErrorTrace ? 480.2 : 180.2,
+        status: spanStatus,
         service_name: 'user-service',
         environment: environment || 'prod',
         http_method: null,
         http_path: null,
         http_status_code: null,
         labels: null,
-        db_statement: 'SELECT * FROM users WHERE id = $1',
+        db_statement: isErrorTrace
+          ? 'SELECT * FROM users WHERE id = $1 -- Query timeout'
+          : 'SELECT * FROM users WHERE id = $1',
       },
       {
         timestamp: new Date(Date.now() - 800).toISOString(),
@@ -134,7 +141,7 @@ export const handlers = [
         name: 'serialize response',
         kind: 'INTERNAL',
         duration_ms: 25.3,
-        status: 'OK',
+        status: isErrorTrace ? 'ERROR' : 'OK',
         service_name: 'user-service',
         environment: environment || 'prod',
         http_method: null,
@@ -155,15 +162,40 @@ export const handlers = [
         trace_id: traceId as string,
         labels: { user_id: '12345' },
       },
-      {
-        timestamp: new Date(Date.now() - 900).toISOString(),
-        level: 'INFO',
-        message: 'Database query executed successfully',
-        service_name: 'user-service',
-        span_id: 'span-002',
-        trace_id: traceId as string,
-        labels: { query_time_ms: '180' },
-      },
+      isErrorTrace
+        ? {
+            timestamp: new Date(Date.now() - 900).toISOString(),
+            level: 'ERROR',
+            message: `Database query failed: Connection timeout after 30s`,
+            service_name: 'user-service',
+            span_id: 'span-002',
+            trace_id: traceId as string,
+            labels: { error_code: 'DB_TIMEOUT', query_time_ms: '30000' },
+          }
+        : {
+            timestamp: new Date(Date.now() - 900).toISOString(),
+            level: 'INFO',
+            message: 'Database query executed successfully',
+            service_name: 'user-service',
+            span_id: 'span-002',
+            trace_id: traceId as string,
+            labels: { query_time_ms: '180' },
+          },
+      ...(isErrorTrace
+        ? [
+            {
+              timestamp: new Date(Date.now() - 850).toISOString(),
+              level: 'ERROR' as const,
+              message: `Request failed with status ${httpStatusCode}: ${
+                httpStatusCode === 500 ? 'Internal Server Error' : 'Not Found'
+              }`,
+              service_name: 'api-gateway',
+              span_id: 'span-001',
+              trace_id: traceId as string,
+              labels: { http_status: httpStatusCode.toString() },
+            },
+          ]
+        : []),
     ];
 
     const response: GetTraceByIdResponse = {
@@ -391,18 +423,24 @@ export const handlers = [
     const traces: TraceSummary[] = [];
 
     for (let i = 0; i < size; i++) {
+      // 15% 확률로 에러, 또는 status 필터가 있으면 그에 따름
       const traceStatus = status || (Math.random() > 0.15 ? 'OK' : 'ERROR');
+      const isError = traceStatus === 'ERROR';
+
       traces.push({
-        trace_id: `trace-${Date.now()}-${i}`,
+        trace_id: isError ? `trace-error-${Date.now()}-${i}` : `trace-${Date.now()}-${i}`,
         root_span_name: `GET /api/resource/${i}`,
         status: traceStatus,
-        duration_ms: Math.floor(Math.random() * 1000) + 100,
+        duration_ms: isError
+          ? Math.floor(Math.random() * 2000) + 500 // 에러는 더 오래 걸림
+          : Math.floor(Math.random() * 1000) + 100,
         start_time: new Date(Date.now() - i * 120000).toISOString(),
         service_name: serviceName as string,
         environment,
         labels: {
           user_id: `user-${Math.floor(Math.random() * 1000)}`,
           version: '1.0.0',
+          ...(isError && { error_type: 'ServerError' }),
         },
       });
     }

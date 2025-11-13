@@ -25,11 +25,21 @@ const iconMap = (tone: NonNullable<StatItem['tone']>) => {
   }
 };
 
-export default function StatCard({ item }: { item: StatItem }) {
+interface StatCardProps {
+  item: StatItem;
+  onClick?: () => void;
+}
+
+export default function StatCard({ item, onClick }: StatCardProps) {
   const tone = item.tone ?? 'neutral';
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 flex items-center justify-between transition hover:shadow-sm">
+    <div
+      className={`rounded-2xl border border-gray-200 bg-white p-4 flex items-center justify-between transition hover:shadow-sm ${
+        onClick ? 'cursor-pointer' : ''
+      }`}
+      onClick={onClick}
+    >
       <div>
         <div className="text-sm text-gray-500">{item.label}</div>
         <div className={`mt-1 text-2xl font-semibold ${toneMap[tone]}`}>{item.value}</div>

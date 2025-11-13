@@ -9,6 +9,7 @@ import { TraceSummary } from '@/types/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { formatChartTimeLabel, getXAxisInterval } from '@/src/utils/chartFormatter';
 import StateHandler from '@/components/ui/StateHandler';
+import TraceAnalysis from '@/components/analysis/TraceAnalysis';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false }); // Import from utility
 
@@ -125,6 +126,8 @@ function transformTraceToPoint(trace: TraceSummary): TracePoint {
 export default function TracesSection({ serviceName }: TracesSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15; // 페이지당 15개 고정
+  const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // Zustand store에서 시간 정보 가져오기
   const { startTime, endTime, interval } = useTimeRangeStore();
@@ -257,12 +260,13 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
         if (!trace) return '';
 
         return `
-          <div style="font-weight:600;margin-bottom:4px;">${status}</div>
+          <div style="font-weight:700;margin-bottom:6px;font-size:14px;">${status}</div>
           <div style="margin:2px 0;">Trace ID: ${trace.traceId}</div>
           <div style="margin:2px 0;">Service: ${trace.service}</div>
           <div style="margin:2px 0;">Resource: ${trace.resource}</div>
           <div style="margin:2px 0;">Time: ${time}</div>
           <div style="margin:2px 0;">Duration: ${duration} ms</div>
+          <div style="margin-top:8px;color:#3b82f6;font-size:11px;">Click to view details</div>
         `;
       },
     },
@@ -335,6 +339,19 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
     }
   };
 
+  // 트레이스 클릭 핸들러
+  const handleTraceClick = (traceId: string) => {
+    setSelectedTraceId(traceId);
+    setIsPanelOpen(true);
+  };
+
+  // 패널 닫기 핸들러
+  const handleClosePanel = () => {
+    setIsPanelOpen(false);
+    // 애니메이션이 끝난 후 selectedTraceId 초기화
+    setTimeout(() => setSelectedTraceId(null), 300);
+  };
+
   return (
     <div className="bg-white p-5 rounded-lg border border-gray-200">
       <StateHandler
@@ -348,11 +365,30 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
         emptyMessage="선택한 시간 범위에 트레이스가 없습니다"
       >
         {/* 차트 */}
-        <ReactECharts option={option} style={{ height: 400 }} />
+        <ReactECharts
+          option={option}
+          style={{ height: 400 }}
+          onEvents={{
+            click: (params: { seriesName: string; dataIndex: number }) => {
+              const status = params.seriesName.toLowerCase();
+              const trace = allTraces.filter((t: TracePoint) => t.status === status)[
+                params.dataIndex
+              ];
+              if (trace) {
+                handleTraceClick(trace.traceId);
+              }
+            },
+          }}
+        />
 
         {/* 테이블 */}
         <div className="mt-6">
-          <Table<TracePoint> columns={TRACE_TABLE_COLUMNS} data={traces} className="w-full" />
+          <Table<TracePoint>
+            columns={TRACE_TABLE_COLUMNS}
+            data={traces}
+            className="w-full"
+            onRowClick={(row) => handleTraceClick(row.traceId)}
+          />
         </div>
 
         {/* 페이지네이션 */}
@@ -363,6 +399,16 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
           onNext={handleNextPage}
         />
       </StateHandler>
+
+      {/* Trace Analysis Panel */}
+      {selectedTraceId && (
+        <TraceAnalysis
+          key={selectedTraceId}
+          isOpen={isPanelOpen}
+          onClose={handleClosePanel}
+          traceId={selectedTraceId}
+        />
+      )}
     </div>
   );
 }

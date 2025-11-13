@@ -1,0 +1,104 @@
+'use client';
+
+import { LogEntry } from '@/types/apm';
+import { FiX, FiClock, FiTag, FiLink } from 'react-icons/fi';
+import LevelBadge from '../features/apm/services/[serviceId]/logs/LevelBadge';
+
+interface LogDetailProps {
+  log: LogEntry | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function LogDetail({ log, isOpen, onClose }: LogDetailProps) {
+  if (!log) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/10 backdrop-blur-[2px] z-40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+      />
+
+      {/* Slide-over Panel */}
+      <div
+        className={`fixed right-0 top-0 h-full w-full md:w-[600px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-gray-200 p-4 md:p-6">
+          <h2 className="text-xl font-semibold text-gray-900">로그 상세</h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors hover:cursor-pointer"
+            aria-label="닫기"
+          >
+            <FiX className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto h-[calc(100%-80px)] p-4 md:p-6">
+          {/* Log Level */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-500 mb-2">레벨</label>
+            <LevelBadge level={log.level} />
+          </div>
+
+          {/* Timestamp */}
+          <div className="mb-6">
+            <label className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
+              <FiClock className="w-4 h-4" />
+              타임스탬프
+            </label>
+            <div className="text-gray-900 font-mono text-sm bg-gray-50 p-3 rounded-lg">
+              {log.timestamp}
+            </div>
+          </div>
+
+          {/* Service */}
+          <div className="mb-6">
+            <label className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
+              <FiTag className="w-4 h-4" />
+              서비스
+            </label>
+            <div className="text-gray-900 bg-gray-50 p-3 rounded-lg">{log.service}</div>
+          </div>
+
+          {/* Trace ID */}
+          {log.traceId && (
+            <div className="mb-6">
+              <label className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-2">
+                <FiLink className="w-4 h-4" />
+                Trace ID
+              </label>
+              <div className="text-gray-900 font-mono text-sm bg-gray-50 p-3 rounded-lg break-all">
+                {log.traceId}
+              </div>
+            </div>
+          )}
+
+          {/* Message */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-500 mb-2">메시지</label>
+            <div className="text-gray-900 bg-gray-50 p-4 rounded-lg whitespace-pre-wrap wrap-break-word">
+              {log.message}
+            </div>
+          </div>
+
+          {/* Log ID */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-500 mb-2">로그 ID</label>
+            <div className="text-gray-600 font-mono text-xs bg-gray-50 p-3 rounded-lg break-all">
+              {log.id}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

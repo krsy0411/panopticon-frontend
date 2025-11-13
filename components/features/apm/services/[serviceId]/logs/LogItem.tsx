@@ -3,9 +3,17 @@
 import type { LogEntry } from '@/types/apm';
 import LevelBadge from './LevelBadge';
 
-export default function LogItem({ item }: { item: LogEntry }) {
+interface LogItemProps {
+  item: LogEntry;
+  onClick?: (log: LogEntry) => void;
+}
+
+export default function LogItem({ item, onClick }: LogItemProps) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 md:p-5 flex items-start justify-between hover:shadow-sm transition">
+    <div
+      className="rounded-2xl border border-gray-200 bg-white p-4 md:p-5 flex items-start justify-between hover:shadow-sm transition cursor-pointer"
+      onClick={() => onClick?.(item)}
+    >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <LevelBadge level={item.level} />

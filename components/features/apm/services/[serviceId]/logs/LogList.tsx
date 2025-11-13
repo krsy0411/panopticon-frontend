@@ -3,11 +3,16 @@
 import type { LogEntry } from '@/types/apm';
 import LogItem from './LogItem';
 
-export default function LogList({ items }: { items: LogEntry[] }) {
+interface LogListProps {
+  items: LogEntry[];
+  onItemClick?: (log: LogEntry) => void;
+}
+
+export default function LogList({ items, onItemClick }: LogListProps) {
   return (
     <div className="flex flex-col gap-3">
       {items.map((l) => (
-        <LogItem key={l.id} item={l} />
+        <LogItem key={l.id} item={l} onClick={onItemClick} />
       ))}
     </div>
   );

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { IoArrowBack } from 'react-icons/io5';
 import { StepIndicator } from './docker/StepIndicator';
 import { InstallStep, MonitoringOptions, PlatformType, StepConfig } from '@/types/agent-install';
-import { platformsData } from '@/app/(authenticated)/install/platforms';
+import { platformsData } from '@/app/(authenticated)/setting/install/platforms';
 import {
   DockerStepOne,
   DockerStepThree,

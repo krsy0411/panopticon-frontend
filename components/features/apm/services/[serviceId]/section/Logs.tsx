@@ -4,9 +4,12 @@ import { useMemo, useState } from 'react';
 import FilterBar from '../logs/FilterBar';
 import StatGrid from '../../../../../ui/StatGrid';
 import LogList from '../logs/LogList';
+import Pagination from '../../Pagination';
+import LogDetail from '../../../../../analysis/LogDetail';
 import { useQuery } from '@tanstack/react-query';
 import { getLogs } from '@/src/api/apm';
-import { LogLevel } from '@/types/apm';
+import { LogLevel, LogEntry } from '@/types/apm';
+import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 
 interface LogsSectionProps {
   serviceName: string;
@@ -14,17 +17,25 @@ interface LogsSectionProps {
 
 export default function LogsSection({ serviceName }: LogsSectionProps) {
   const [query, setQuery] = useState('');
-  const [level, setLevel] = useState<LogLevel | ''>('');
+  const [level, setLevel] = useState<LogLevel | ''>('ERROR');
   const [service, setService] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
+  const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  const { startTime, endTime } = useTimeRangeStore();
 
   // 로그 목록 가져오기 (새 API)
   const { data: logsData } = useQuery({
-    queryKey: ['logs', serviceName, level],
+    queryKey: ['logs', serviceName, level, startTime, endTime],
     queryFn: () =>
       getLogs({
         service_name: serviceName,
         level: level || undefined,
-        size: 100,
+        from: startTime,
+        to: endTime,
+        size: 60,
       }),
   });
 
@@ -68,10 +79,6 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
   }, [logs]);
   const levels = ['', 'ERROR', 'WARN', 'INFO', 'DEBUG'];
 
-  const handleLevelChange = (v: string) => {
-    setLevel(v as LogLevel | '');
-  };
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return logs.filter(
@@ -88,20 +95,83 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
     );
   }, [query, level, service, logs]);
 
+  // 페이지네이션 계산
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginatedLogs = useMemo(() => {
+    const startIdx = (page - 1) * pageSize;
+    const endIdx = startIdx + pageSize;
+    return filtered.slice(startIdx, endIdx);
+  }, [filtered, page, pageSize]);
+
+  const handlePrev = () => {
+    if (page > 1) {
+      setPage(page - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (page < totalPages) {
+      setPage(page + 1);
+    }
+  };
+
+  const handleLevelChange = (v: string) => {
+    setLevel(v as LogLevel | '');
+    setPage(1); // 레벨 변경 시 첫 페이지로 이동
+  };
+
+  const handleStatClick = (itemId: string) => {
+    setPage(1); // 첫 페이지로 이동
+
+    // StatItem의 id에 따라 해당 로그 레벨 설정
+    switch (itemId) {
+      case 'error':
+        setLevel('ERROR');
+        break;
+      case 'warn':
+        setLevel('WARN');
+        break;
+      case 'info':
+        setLevel('INFO');
+        break;
+      case 'total':
+        setLevel(''); // 전체 보기
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleLogClick = (log: LogEntry) => {
+    setSelectedLog(log);
+    setIsPanelOpen(true);
+  };
+
+  const handleClosePanel = () => {
+    setIsPanelOpen(false);
+    // 애니메이션이 끝난 후 selectedLog를 null로 설정
+    setTimeout(() => setSelectedLog(null), 300);
+  };
+
   return (
-    <section id="logs" className="flex flex-col gap-4 md:gap-6 scroll-mt-24">
-      <FilterBar
-        query={query}
-        level={level}
-        service={service}
-        levels={levels}
-        services={services}
-        onChangeQuery={setQuery}
-        onChangeLevel={handleLevelChange}
-        onChangeService={setService}
-      />
-      <StatGrid items={stats} />
-      <LogList items={filtered} />
-    </section>
+    <>
+      <section id="logs" className="flex flex-col gap-4 md:gap-6 scroll-mt-24">
+        <FilterBar
+          query={query}
+          level={level}
+          service={service}
+          levels={levels}
+          services={services}
+          onChangeQuery={setQuery}
+          onChangeLevel={handleLevelChange}
+          onChangeService={setService}
+        />
+        <StatGrid items={stats} onItemClick={handleStatClick} />
+        <LogList items={paginatedLogs} onItemClick={handleLogClick} />
+        <Pagination page={page} totalPages={totalPages} onPrev={handlePrev} onNext={handleNext} />
+      </section>
+
+      <LogDetail log={selectedLog} isOpen={isPanelOpen} onClose={handleClosePanel} />
+    </>
   );
 }
