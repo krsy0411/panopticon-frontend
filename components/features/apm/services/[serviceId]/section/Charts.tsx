@@ -24,6 +24,7 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
         from: startTime,
         to: endTime,
         interval: interval,
+        environment: 'prod',
       }),
   });
 
