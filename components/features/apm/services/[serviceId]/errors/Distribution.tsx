@@ -6,26 +6,16 @@ import React from 'react';
 import { EChartsOption } from 'echarts';
 
 import Table from '@/components/ui/Table';
-import { useQuery } from '@tanstack/react-query';
-import { getServiceErrors } from '@/src/api/apm';
-import { useTimeRangeStore } from '@/src/store/timeRangeStore';
-import { ErrorItem } from '@/types/apm';
+import { ErrorItem, GetServiceErrorsResponse } from '@/types/apm';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
 interface ErrorDistributionProps {
-  serviceName: string;
+  data: GetServiceErrorsResponse | undefined;
 }
 
-export default function ErrorDistribution({ serviceName }: ErrorDistributionProps) {
-  const { startTime, endTime } = useTimeRangeStore();
-
-  const { data: errorData } = useQuery({
-    queryKey: ['serviceErrors', serviceName, startTime, endTime],
-    queryFn: () => getServiceErrors(serviceName, { start_time: startTime, end_time: endTime }),
-  });
-
-  const errors = errorData?.errors || [];
+export default function ErrorDistribution({ data }: ErrorDistributionProps) {
+  const errors = data?.errors || [];
   const resources = [...new Set(errors.map((e) => e.resource))];
   const services = [...new Set(errors.map((e) => e.service_name))];
 

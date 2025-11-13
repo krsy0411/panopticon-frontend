@@ -3,24 +3,14 @@
 'use client';
 
 import StatGrid from '@/components/ui/StatGrid';
-import type { StatItem } from '@/types/apm';
-import { useQuery } from '@tanstack/react-query';
-import { getServiceErrors } from '@/src/api/apm';
-import { useTimeRangeStore } from '@/src/store/timeRangeStore';
+import type { StatItem, GetServiceErrorsResponse } from '@/types/apm';
 import { useMemo } from 'react';
 
 interface ErrorSummaryProps {
-  serviceName: string;
+  data: GetServiceErrorsResponse | undefined;
 }
 
-export default function ErrorSummary({ serviceName }: ErrorSummaryProps) {
-  const { startTime, endTime } = useTimeRangeStore();
-
-  const { data } = useQuery({
-    queryKey: ['serviceErrors', serviceName, startTime, endTime],
-    queryFn: () => getServiceErrors(serviceName, { start_time: startTime, end_time: endTime }),
-  });
-
+export default function ErrorSummary({ data }: ErrorSummaryProps) {
   const summaryItems: StatItem[] = useMemo(() => {
     if (!data) {
       return [

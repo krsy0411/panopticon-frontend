@@ -4,12 +4,11 @@ import { SelectDate } from '@/components/features/apm/services/SelectDate';
 import TracesSection from '@/components/features/apm/services/[serviceId]/section/Traces';
 import ChartsSection from '@/components/features/apm/services/[serviceId]/section/Charts';
 import { TimeRange } from '@/types/time';
-import ErrorsSection from '@/components/features/apm/services/[serviceId]/section/Errors';
 import ResourcesSection from '@/components/features/apm/services/[serviceId]/section/Resources';
-import DependenciesSection from '@/components/features/apm/services/[serviceId]/section/Dependencies';
 import { useParams } from 'next/navigation';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import type { TimeRange as TimeRangeType } from '@/src/utils/timeRange';
+import ErrorsSection from '@/components/features/apm/services/[serviceId]/section/Errors';
 
 export default function ServiceOverview() {
   const params = useParams();
@@ -50,7 +49,8 @@ export default function ServiceOverview() {
       {/* Dependencies section */}
       <div id="dependencies" className="pt-4 scroll-mt-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-2">Dependencies</h2>
-        <DependenciesSection serviceName={serviceId} />
+        <div className="bg-white p-5 rounded-lg border border-gray-200">준비 중...</div>
+        {/* <DependenciesSection serviceName={serviceId} /> */}
       </div>
 
       {/* 트레이스 영역 */}

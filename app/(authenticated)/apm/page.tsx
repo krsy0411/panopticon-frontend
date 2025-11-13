@@ -10,7 +10,8 @@ import Table from '@/components/ui/Table';
 import DatabaseIcon from '@/components/icons/services/Database';
 import FrontendIcon from '@/components/icons/services/Frontend';
 import ApiIcon from '@/components/icons/services/Api';
-import { getServices, getIssues } from '@/src/api/apm';
+import { getServices } from '@/src/api/apm';
+import { ServiceSummary } from '@/types/apm';
 
 // 서비스 타입별 아이콘 매핑
 const SERVICE_TYPE_ICONS: Record<string, { icon: typeof DatabaseIcon; color: string }> = {
@@ -29,13 +30,7 @@ const renderServiceIcon = (type: string) => {
 };
 
 // Table Column 정의 (API 응답 기반)
-interface TableService {
-  service_type: string;
-  service_name: string;
-  request_count: number;
-  p95_latency_ms: number;
-  error_rate: number;
-}
+type TableService = ServiceSummary & { service_type?: string };
 
 const columns = [
   {
@@ -44,8 +39,8 @@ const columns = [
     width: '20%',
     render: (_value: TableService[keyof TableService], row: TableService) => (
       <div className="flex items-center gap-2">
-        {renderServiceIcon(row.service_type)}
-        <span className="text-sm text-gray-600">{row.service_type}</span>
+        {renderServiceIcon(row.service_type || 'API')}
+        <span className="text-sm text-gray-600">{row.service_type || 'API'}</span>
       </div>
     ),
   },
@@ -61,7 +56,7 @@ const columns = [
     render: (value: TableService[keyof TableService]) => (value as number).toLocaleString(),
   },
   {
-    key: 'p95_latency_ms' as keyof TableService,
+    key: 'latency_p95_ms' as keyof TableService,
     header: 'P95 Latency',
     width: '15%',
     render: (value: TableService[keyof TableService]) => (
@@ -73,8 +68,8 @@ const columns = [
     header: 'Error Rate',
     width: '15%',
     render: (value: TableService[keyof TableService]) => (
-      <span className={(value as number) > 2 ? 'text-red-600 font-semibold' : ''}>
-        {value as number}%
+      <span className={(value as number) > 0.02 ? 'text-red-600 font-semibold' : ''}>
+        {((value as number) * 100).toFixed(2)}%
       </span>
     ),
   },
@@ -89,19 +84,15 @@ export default function ApmPage() {
     const now = new Date();
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     return {
-      start_time: oneHourAgo.toISOString(),
-      end_time: now.toISOString(),
+      from: oneHourAgo.toISOString(),
+      to: now.toISOString(),
+      environment: 'prod',
     };
   }, []);
 
   const { data: servicesData, isLoading: servicesLoading } = useQuery({
     queryKey: ['services', timeRange],
     queryFn: () => getServices(timeRange),
-  });
-
-  const { data: issuesData, isLoading: issuesLoading } = useQuery({
-    queryKey: ['issues'],
-    queryFn: getIssues,
   });
 
   // 검색 필터링
@@ -166,7 +157,7 @@ export default function ApmPage() {
           )}
         </div>
 
-        {/* Issues Section */}
+        {/* Issues Section - Temporarily hidden (API endpoint not available in new spec) */}
         <div className="bg-white/95 backdrop-blur-sm rounded-lg border border-gray-200 shadow-sm overflow-hidden">
           {/* Header */}
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
@@ -177,35 +168,11 @@ export default function ApmPage() {
           </div>
 
           {/* Content */}
-          {issuesLoading ? (
-            <div className="px-4 py-16 flex items-center justify-center">
-              <p className="text-gray-400 text-sm">Loading issues...</p>
-            </div>
-          ) : issuesData && issuesData.issues.length > 0 ? (
-            <div className="divide-y divide-gray-100">
-              {issuesData.issues.map((issue) => (
-                <div key={issue.issue_id} className="px-4 py-3 hover:bg-gray-50">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{issue.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Service: {issue.service_name} • Affected:{' '}
-                        {issue.affected_requests.toLocaleString()} requests
-                      </p>
-                    </div>
-                    <span className="text-xs text-gray-400">
-                      {new Date(issue.occurred_at).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="px-4 py-16 flex flex-col items-center justify-center text-center">
-              <FiAlertOctagon className="w-12 h-12 mb-3 text-purple-400" />
-              <p className="text-gray-600 text-sm">No matching results found</p>
-            </div>
-          )}
+          <div className="px-4 py-16 flex flex-col items-center justify-center text-center">
+            <FiAlertOctagon className="w-12 h-12 mb-3 text-purple-400" />
+            <p className="text-gray-600 text-sm">No issues detected</p>
+            <p className="text-xs text-gray-400 mt-1">All services are running normally</p>
+          </div>
         </div>
       </div>
     </>

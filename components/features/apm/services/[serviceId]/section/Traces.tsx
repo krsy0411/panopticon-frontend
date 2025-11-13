@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getServiceTraces } from '@/src/api/apm';
-import { Trace } from '@/types/apm';
+import { TraceSummary } from '@/types/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { formatChartTimeLabel, getXAxisInterval } from '@/src/utils/chartFormatter';
 
@@ -24,7 +24,6 @@ interface TracePoint {
   traceId: string;
   resource: string;
   service: string;
-  statusCode: number;
 }
 
 // 테이블 컬럼 정의
@@ -58,7 +57,7 @@ const TRACE_TABLE_COLUMNS: Array<{
   {
     key: 'duration',
     header: 'DURATION',
-    width: '10%',
+    width: '15%',
     render: (value: TracePoint[keyof TracePoint]) => {
       const ms = Number(value);
       if (ms >= 1000) {
@@ -68,19 +67,19 @@ const TRACE_TABLE_COLUMNS: Array<{
     },
   },
   {
-    key: 'statusCode',
-    header: 'STATUS CODE',
+    key: 'status',
+    header: 'STATUS',
     width: '10%',
-    render: (value: TracePoint[keyof TracePoint], row: TracePoint) => {
-      const code = Number(value);
-      const isError = row.status === 'error';
+    render: (value: TracePoint[keyof TracePoint]) => {
+      const status = String(value);
+      const isError = status === 'error';
       return (
         <span
           className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
             isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
           }`}
         >
-          {code}
+          {isError ? 'ERROR' : 'OK'}
         </span>
       );
     },
@@ -88,7 +87,7 @@ const TRACE_TABLE_COLUMNS: Array<{
   {
     key: 'latencyBreakdown',
     header: 'LATENCY BREAKDOWN',
-    width: '25%',
+    width: '30%',
     sortable: false,
     render: (value: TracePoint[keyof TracePoint]) => {
       const duration = Number(value);
@@ -104,9 +103,9 @@ const TRACE_TABLE_COLUMNS: Array<{
   },
 ];
 
-// Trace를 TracePoint로 변환
-function transformTraceToPoint(trace: Trace): TracePoint {
-  const date = new Date(trace.date);
+// TraceSummary를 TracePoint로 변환
+function transformTraceToPoint(trace: TraceSummary): TracePoint {
+  const date = new Date(trace.start_time);
   const timestamp = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(
     2,
     '0',
@@ -115,11 +114,10 @@ function transformTraceToPoint(trace: Trace): TracePoint {
     timestamp,
     duration: trace.duration_ms,
     latencyBreakdown: trace.duration_ms, // duration과 동일한 값
-    status: trace.error || trace.status_code >= 400 ? 'error' : 'success',
+    status: trace.status === 'ERROR' ? 'error' : 'success',
     traceId: trace.trace_id,
-    resource: trace.resource,
-    service: trace.service,
-    statusCode: trace.status_code,
+    resource: trace.root_span_name,
+    service: trace.service_name,
   };
 }
 
@@ -135,18 +133,19 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
     queryKey: ['serviceTraces', serviceName, startTime, endTime],
     queryFn: () =>
       getServiceTraces(serviceName, {
-        start_time: startTime,
-        end_time: endTime,
+        from: startTime,
+        to: endTime,
+        environment: 'prod',
         page: 1,
-        limit: 1000,
-      }), // 충분히 큰 limit으로 모든 데이터 가져오기
+        size: 500,
+      }),
   });
 
   // 전체 트레이스 데이터 변환 (최신순 정렬)
   const allTraces = useMemo(() => {
     if (!data?.traces) return [];
     const sortedTraces = [...data.traces].sort(
-      (a: Trace, b: Trace) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime(),
     );
     return sortedTraces.map(transformTraceToPoint);
   }, [data]);
@@ -263,7 +262,6 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
           <div style="margin:2px 0;">Resource: ${trace.resource}</div>
           <div style="margin:2px 0;">Time: ${time}</div>
           <div style="margin:2px 0;">Duration: ${duration} ms</div>
-          <div style="margin:2px 0;">Status: ${trace.statusCode}</div>
         `;
       },
     },

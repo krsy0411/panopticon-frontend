@@ -9,8 +9,10 @@ export default function LevelBadge({ level }: { level: LogLevel }) {
   const { bg, text, Icon } =
     level === 'ERROR'
       ? { bg: 'bg-red-100', text: 'text-red-700', Icon: BiErrorCircle }
-      : level === 'WARNING'
+      : level === 'WARN'
       ? { bg: 'bg-amber-100', text: 'text-amber-700', Icon: AiOutlineWarning }
+      : level === 'DEBUG'
+      ? { bg: 'bg-gray-100', text: 'text-gray-700', Icon: FiInfo }
       : { bg: 'bg-blue-100', text: 'text-blue-700', Icon: FiInfo };
 
   return (

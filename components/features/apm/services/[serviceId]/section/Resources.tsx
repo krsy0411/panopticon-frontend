@@ -7,9 +7,20 @@ import Pagination from '@/components/features/apm/services/Pagination';
 import Dropdown from '@/components/ui/Dropdown';
 import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
-import { getServiceResources } from '@/src/api/apm';
-import { Resource, ResourceTableRow } from '@/types/apm';
+import { getServiceEndpoints } from '@/src/api/apm';
+import { EndpointMetrics } from '@/types/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
+
+// ResourceTableRow 타입 정의
+interface ResourceTableRow {
+  resourceName: string;
+  requests: number;
+  totalTime: string;
+  p95Latency: number;
+  errors: number;
+  errorRate: string;
+  date: string;
+}
 import {
   formatChartTimeLabel,
   getBarWidthForResources,
@@ -100,11 +111,17 @@ const RESOURCE_TABLE_COLUMNS: Array<{
   },
 ];
 
-// Resource를 TableRow로 변환
-function transformResourceToTableRow(resource: Resource): ResourceTableRow {
-  const totalTimeSeconds = resource.total_time_ms / 1000;
-  let totalTimeStr = '';
+// EndpointMetrics를 TableRow로 변환
+function transformEndpointToTableRow(endpoint: EndpointMetrics): ResourceTableRow {
+  // 에러 수 계산 (request_count * error_rate)
+  const errors = Math.round(endpoint.request_count * endpoint.error_rate);
 
+  // 총 시간 계산 (추정값: request_count * avg latency)
+  const avgLatency = endpoint.latency_p95_ms * 0.8; // p95를 avg로 근사
+  const totalTimeMs = endpoint.request_count * avgLatency;
+  const totalTimeSeconds = totalTimeMs / 1000;
+
+  let totalTimeStr = '';
   if (totalTimeSeconds >= 3600) {
     const hours = Math.floor(totalTimeSeconds / 3600);
     const minutes = Math.floor((totalTimeSeconds % 3600) / 60);
@@ -117,8 +134,8 @@ function transformResourceToTableRow(resource: Resource): ResourceTableRow {
     totalTimeStr = `${totalTimeSeconds.toFixed(1)}s`;
   }
 
-  // updated_at 날짜 포맷팅 (ISO 8601 -> "12/31 00:00:00" 형식)
-  const date = new Date(resource.updated_at);
+  // 현재 시간 포맷팅
+  const date = new Date();
   const formattedDate = `${date.getMonth() + 1}/${date.getDate()} ${String(
     date.getHours(),
   ).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(
@@ -126,12 +143,12 @@ function transformResourceToTableRow(resource: Resource): ResourceTableRow {
   ).padStart(2, '0')}`;
 
   return {
-    resourceName: resource.resource_name,
-    requests: resource.requests,
+    resourceName: endpoint.endpoint_name,
+    requests: endpoint.request_count,
     totalTime: totalTimeStr,
-    p95Latency: resource.p95_latency_ms,
-    errors: resource.errors,
-    errorRate: `${resource.error_rate.toFixed(2)}%`,
+    p95Latency: endpoint.latency_p95_ms,
+    errors,
+    errorRate: `${(endpoint.error_rate * 100).toFixed(2)}%`,
     date: formattedDate,
   };
 }
@@ -178,19 +195,20 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
 
   // API 데이터 가져오기
   const { data, isLoading, error } = useQuery({
-    queryKey: ['serviceResources', serviceName, startTime, endTime],
+    queryKey: ['serviceEndpoints', serviceName, startTime, endTime],
     queryFn: () =>
-      getServiceResources(serviceName, {
-        start_time: startTime,
-        end_time: endTime,
-        sort_by: 'requests',
+      getServiceEndpoints(serviceName, {
+        from: startTime,
+        to: endTime,
+        environment: 'prod',
+        limit: 100,
       }),
   });
 
   // 전체 데이터 변환
   const allResources = useMemo(() => {
-    if (!data?.resources) return [];
-    return data.resources.map((resource: Resource) => transformResourceToTableRow(resource));
+    if (!data?.endpoints) return [];
+    return data.endpoints.map((endpoint) => transformEndpointToTableRow(endpoint));
   }, [data]);
 
   const totalCount = allResources.length;

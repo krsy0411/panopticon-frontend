@@ -1,11 +1,9 @@
 'use client';
 import dynamic from 'next/dynamic';
 import * as echarts from 'echarts';
-import { useQuery } from '@tanstack/react-query';
-import { getServiceErrors } from '@/src/api/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { useMemo } from 'react';
-import { ErrorTrendSeries } from '@/types/apm';
+import { ErrorTrendSeries, GetServiceErrorsResponse } from '@/types/apm';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
@@ -16,16 +14,11 @@ interface TrendParam {
 }
 
 interface ErrorTrendChartProps {
-  serviceName: string;
+  data: GetServiceErrorsResponse | undefined;
 }
 
-export default function ErrorTrendChart({ serviceName }: ErrorTrendChartProps) {
+export default function ErrorTrendChart({ data }: ErrorTrendChartProps) {
   const { startTime, endTime } = useTimeRangeStore();
-
-  const { data } = useQuery({
-    queryKey: ['serviceErrors', serviceName, startTime, endTime],
-    queryFn: () => getServiceErrors(serviceName, { start_time: startTime, end_time: endTime }),
-  });
 
   // 에러 데이터를 시간대별로 그룹화하여 트렌드 데이터 생성
   const mockErrorTrendData: ErrorTrendSeries[] = useMemo(() => {

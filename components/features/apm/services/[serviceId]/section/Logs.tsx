@@ -5,8 +5,8 @@ import FilterBar from '../logs/FilterBar';
 import StatGrid from '../../../../../ui/StatGrid';
 import LogList from '../logs/LogList';
 import { useQuery } from '@tanstack/react-query';
-import { getServiceLogs, getServiceLogStats } from '@/src/api/apm';
-import { ServiceLog, LogLevel } from '@/types/apm';
+import { getLogs } from '@/src/api/apm';
+import { LogLevel } from '@/types/apm';
 
 interface LogsSectionProps {
   serviceName: string;
@@ -14,53 +14,56 @@ interface LogsSectionProps {
 
 export default function LogsSection({ serviceName }: LogsSectionProps) {
   const [query, setQuery] = useState('');
-  const [level, setLevel] = useState<'error' | 'warning' | 'info' | ''>('');
+  const [level, setLevel] = useState<LogLevel | ''>('');
   const [service, setService] = useState('');
 
-  // 로그 통계 가져오기
-  const { data: statsData } = useQuery({
-    queryKey: ['serviceLogStats', serviceName],
-    queryFn: () => getServiceLogStats(serviceName),
-  });
-
-  // 로그 목록 가져오기
+  // 로그 목록 가져오기 (새 API)
   const { data: logsData } = useQuery({
-    queryKey: ['serviceLogs', serviceName, level],
-    queryFn: () => getServiceLogs(serviceName, level ? { level } : undefined),
+    queryKey: ['logs', serviceName, level],
+    queryFn: () =>
+      getLogs({
+        service_name: serviceName,
+        level: level || undefined,
+        size: 100,
+      }),
   });
-
-  // 통계 데이터 변환
-  const stats = useMemo(() => {
-    if (!statsData) return [];
-    return [
-      { id: 'total', label: '총 로그', value: statsData.total_logs, tone: 'neutral' as const },
-      { id: 'error', label: '에러', value: statsData.error_count, tone: 'danger' as const },
-      { id: 'warn', label: '경고', value: statsData.warning_count, tone: 'warning' as const },
-      { id: 'info', label: '정보', value: statsData.info_count, tone: 'info' as const },
-    ];
-  }, [statsData]);
 
   // 로그 데이터 변환
   const logs = useMemo(() => {
-    if (!logsData?.logs) return [];
-    return logsData.logs.map((log: ServiceLog) => ({
-      id: log.log_id,
-      level: log.level.toUpperCase() as LogLevel,
-      service: log.service,
+    if (!logsData?.items) return [];
+    return logsData.items.map((log) => ({
+      id: `${log.service_name}-${log.timestamp}`,
+      level: log.level as LogLevel,
+      service: log.service_name,
       traceId: log.trace_id || '',
       message: log.message,
       timestamp: new Date(log.timestamp).toLocaleString('ko-KR'),
     }));
   }, [logsData]);
 
+  // 통계 데이터 계산 (로그에서 집계)
+  const stats = useMemo(() => {
+    if (!logs.length) return [];
+    const errorCount = logs.filter((l) => l.level === 'ERROR').length;
+    const warnCount = logs.filter((l) => l.level === 'WARN').length;
+    const infoCount = logs.filter((l) => l.level === 'INFO').length;
+
+    return [
+      { id: 'total', label: '총 로그', value: logs.length, tone: 'neutral' as const },
+      { id: 'error', label: '에러', value: errorCount, tone: 'danger' as const },
+      { id: 'warn', label: '경고', value: warnCount, tone: 'warning' as const },
+      { id: 'info', label: '정보', value: infoCount, tone: 'info' as const },
+    ];
+  }, [logs]);
+
   const services: string[] = useMemo(() => {
     const serviceSet = new Set(logs.map((l: { service: string }) => l.service));
     return ['', ...Array.from(serviceSet)];
   }, [logs]);
-  const levels = ['', 'ERROR', 'WARNING', 'INFO'];
+  const levels = ['', 'ERROR', 'WARN', 'INFO', 'DEBUG'];
 
   const handleLevelChange = (v: string) => {
-    setLevel(v as '' | 'error' | 'warning' | 'info');
+    setLevel(v as LogLevel | '');
   };
 
   const filtered = useMemo(() => {

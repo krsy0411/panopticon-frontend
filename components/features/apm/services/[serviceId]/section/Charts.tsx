@@ -20,23 +20,33 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
     queryKey: ['serviceMetrics', serviceName, startTime, endTime, interval],
     queryFn: () =>
       getServiceMetrics(serviceName, {
-        start_time: startTime,
-        end_time: endTime,
+        from: startTime,
+        to: endTime,
         interval: interval,
+        environment: 'prod',
       }),
   });
 
-  // 차트 데이터 변환
+  // 차트 데이터 변환 (새로운 API 응답 형식: 배열 또는 단일 객체)
+  const metricsArray = Array.isArray(data) ? data : data ? [data] : [];
+
   const chartData = {
     timestamps:
-      data?.data.latency.map((item) => formatChartTimeLabel(new Date(item.timestamp), interval)) ||
+      metricsArray[0]?.points.map((item) =>
+        formatChartTimeLabel(new Date(item.timestamp), interval),
+      ) || [],
+    requests:
+      metricsArray
+        .find((m) => m.metric_name === 'http_requests_total')
+        ?.points.map((p) => p.value) || [],
+    errors:
+      metricsArray.find((m) => m.metric_name === 'error_rate')?.points.map((p) => p.value * 100) ||
       [],
-    requests: data?.data.requests_and_errors.map((item) => item.hits) || [],
-    errors: data?.data.requests_and_errors.map((item) => item.errors) || [],
     latency: {
-      p90: data?.data.latency.map((item) => item.p90) || [],
-      p95: data?.data.latency.map((item) => item.p95) || [],
-      p99_9: data?.data.latency.map((item) => item.p99_9) || [],
+      p95:
+        metricsArray.find((m) => m.metric_name === 'latency_p95_ms')?.points.map((p) => p.value) ||
+        [],
+      // 추후 다른 레이턴시 퍼센타일도 추가 가능
     },
   };
 
@@ -181,28 +191,12 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
     },
     series: [
       {
-        name: 'p90',
-        type: 'line',
-        data: chartData.latency.p90,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#10b981' },
-      },
-      {
         name: 'p95',
         type: 'line',
         data: chartData.latency.p95,
         smooth: true,
         symbol: 'none',
         lineStyle: { width: 2, color: '#facc15' },
-      },
-      {
-        name: 'p99.9',
-        type: 'line',
-        data: chartData.latency.p99_9,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#ef4444' },
       },
     ],
   };
