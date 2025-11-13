@@ -40,7 +40,11 @@ async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(fullUrl);
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    const error = new Error(`HTTP error! status: ${response.status}`) as Error & {
+      status?: number;
+    };
+    error.status = response.status;
+    throw error;
   }
 
   return response.json();

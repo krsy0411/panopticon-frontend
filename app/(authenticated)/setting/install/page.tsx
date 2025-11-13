@@ -9,11 +9,11 @@ export default function InstallPage() {
   const router = useRouter();
 
   const handlePlatformSelect = (platform: PlatformType) => {
-    router.push(`/install/${platform}`);
+    router.push(`/setting/install/${platform}`);
   };
 
   const handleFrameworkSelect = (framework: FrameworkType) => {
-    router.push(`/install/${framework}`);
+    router.push(`/setting/install/${framework}`);
   };
 
   const platformNames: Record<PlatformType, string> = {
