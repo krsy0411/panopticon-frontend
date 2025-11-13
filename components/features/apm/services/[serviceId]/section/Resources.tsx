@@ -7,9 +7,21 @@ import Pagination from '@/components/features/apm/services/Pagination';
 import Dropdown from '@/components/ui/Dropdown';
 import dynamic from 'next/dynamic';
 import { useQuery } from '@tanstack/react-query';
-import { getServiceResources } from '@/src/api/apm';
-import { Resource, ResourceTableRow } from '@/types/apm';
+import { getServiceEndpoints } from '@/src/api/apm';
+import { EndpointMetrics } from '@/types/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
+import StateHandler from '@/components/ui/StateHandler';
+
+// ResourceTableRow 타입 정의
+interface ResourceTableRow {
+  resourceName: string;
+  requests: number;
+  totalTime: string;
+  p95Latency: number;
+  errors: number;
+  errorRate: string;
+  date: string;
+}
 import {
   formatChartTimeLabel,
   getBarWidthForResources,
@@ -100,11 +112,17 @@ const RESOURCE_TABLE_COLUMNS: Array<{
   },
 ];
 
-// Resource를 TableRow로 변환
-function transformResourceToTableRow(resource: Resource): ResourceTableRow {
-  const totalTimeSeconds = resource.total_time_ms / 1000;
-  let totalTimeStr = '';
+// EndpointMetrics를 TableRow로 변환
+function transformEndpointToTableRow(endpoint: EndpointMetrics): ResourceTableRow {
+  // 에러 수 계산 (request_count * error_rate)
+  const errors = Math.round(endpoint.request_count * endpoint.error_rate);
 
+  // 총 시간 계산 (추정값: request_count * avg latency)
+  const avgLatency = endpoint.latency_p95_ms * 0.8; // p95를 avg로 근사
+  const totalTimeMs = endpoint.request_count * avgLatency;
+  const totalTimeSeconds = totalTimeMs / 1000;
+
+  let totalTimeStr = '';
   if (totalTimeSeconds >= 3600) {
     const hours = Math.floor(totalTimeSeconds / 3600);
     const minutes = Math.floor((totalTimeSeconds % 3600) / 60);
@@ -117,8 +135,8 @@ function transformResourceToTableRow(resource: Resource): ResourceTableRow {
     totalTimeStr = `${totalTimeSeconds.toFixed(1)}s`;
   }
 
-  // updated_at 날짜 포맷팅 (ISO 8601 -> "12/31 00:00:00" 형식)
-  const date = new Date(resource.updated_at);
+  // 현재 시간 포맷팅
+  const date = new Date();
   const formattedDate = `${date.getMonth() + 1}/${date.getDate()} ${String(
     date.getHours(),
   ).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(
@@ -126,12 +144,12 @@ function transformResourceToTableRow(resource: Resource): ResourceTableRow {
   ).padStart(2, '0')}`;
 
   return {
-    resourceName: resource.resource_name,
-    requests: resource.requests,
+    resourceName: endpoint.endpoint_name,
+    requests: endpoint.request_count,
     totalTime: totalTimeStr,
-    p95Latency: resource.p95_latency_ms,
-    errors: resource.errors,
-    errorRate: `${resource.error_rate.toFixed(2)}%`,
+    p95Latency: endpoint.latency_p95_ms,
+    errors,
+    errorRate: `${(endpoint.error_rate * 100).toFixed(2)}%`,
     date: formattedDate,
   };
 }
@@ -177,23 +195,25 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
   const itemsPerPage = 15;
 
   // API 데이터 가져오기
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['serviceResources', serviceName, startTime, endTime],
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['serviceEndpoints', serviceName, startTime, endTime],
     queryFn: () =>
-      getServiceResources(serviceName, {
-        start_time: startTime,
-        end_time: endTime,
-        sort_by: 'requests',
+      getServiceEndpoints(serviceName, {
+        from: startTime,
+        to: endTime,
+        environment: 'prod',
+        limit: 100,
       }),
   });
 
   // 전체 데이터 변환
   const allResources = useMemo(() => {
-    if (!data?.resources) return [];
-    return data.resources.map((resource: Resource) => transformResourceToTableRow(resource));
+    if (!data?.endpoints) return [];
+    return data.endpoints.map((endpoint) => transformEndpointToTableRow(endpoint));
   }, [data]);
 
   const totalCount = allResources.length;
+  const isEmpty = allResources.length === 0;
 
   // 현재 페이지의 데이터만 추출
   const resources = useMemo(() => {
@@ -389,95 +409,91 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
     };
   }, [resources, errorsTopN, timeLabels, interval]);
 
-  if (error) {
-    return (
-      <div className="bg-white p-5 rounded-lg border border-gray-200">
-        <div className="text-center text-red-500 py-8">
-          <p className="font-semibold mb-2">Error loading resources</p>
-          <p className="text-sm">{error instanceof Error ? error.message : 'Unknown error'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading && resources.length === 0) {
-    return (
-      <div className="bg-white p-5 rounded-lg border border-gray-200">
-        <div className="text-center text-gray-500 py-8">Loading resources...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-white p-5 rounded-lg border border-gray-200">
-      {/* 차트 영역 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {/* Requests 차트 */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-semibold text-gray-800">Requests</h3>
-            <Dropdown value={requestsTopN} onChange={setRequestsTopN} options={topNOptions} />
+      <StateHandler
+        isLoading={isLoading}
+        isError={isError}
+        isEmpty={isEmpty}
+        type="chart"
+        height={800}
+        loadingMessage="리소스 데이터를 불러오는 중..."
+        errorMessage="리소스 데이터를 불러올 수 없습니다"
+        emptyMessage="선택한 시간 범위에 리소스 데이터가 없습니다"
+      >
+        {/* 차트 영역 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Requests 차트 */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-lg font-semibold text-gray-800">Requests</h3>
+              <Dropdown value={requestsTopN} onChange={setRequestsTopN} options={topNOptions} />
+            </div>
+            <ReactECharts
+              option={requestsChartOption}
+              style={{ height: 250 }}
+              notMerge={true} // 차트 옵션이 변경될 때마다 완전히 새로 고침
+              lazyUpdate={true} // 성능 최적화(지연 업데이트)
+            />
           </div>
-          <ReactECharts
-            option={requestsChartOption}
-            style={{ height: 250 }}
-            notMerge={true} // 차트 옵션이 변경될 때마다 완전히 새로 고침
-            lazyUpdate={true} // 성능 최적화(지연 업데이트)
+
+          {/* p95 Latency 차트 */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-lg font-semibold text-gray-800">p95 Latency</h3>
+              <Dropdown value={latencyTopN} onChange={setLatencyTopN} options={topNOptions} />
+            </div>
+            <ReactECharts
+              option={latencyChartOption}
+              style={{ height: 250 }}
+              notMerge={true} // 차트 옵션이 변경될 때마다 완전히 새로 고침
+              lazyUpdate={true} // 성능 최적화(지연 업데이트)
+            />
+          </div>
+
+          {/* Errors 차트 */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-lg font-semibold text-gray-800">Errors</h3>
+              <Dropdown value={errorsTopN} onChange={setErrorsTopN} options={topNOptions} />
+            </div>
+            <ReactECharts
+              option={errorsChartOption}
+              style={{ height: 250 }}
+              notMerge={true} // 차트 옵션이 변경될 때마다 완전히 새로 고침
+              lazyUpdate={true} // 성능 최적화(지연 업데이트)
+            />
+          </div>
+        </div>
+
+        {/* 통계 정보 및 검색 */}
+        <div className="flex justify-between items-center mb-4">
+          <div className="w-64">
+            <SearchInput
+              value={searchQuery}
+              onChange={handleSearch}
+              placeholder="Search Resources"
+            />
+          </div>
+        </div>
+
+        {/* 테이블 */}
+        <div className="mb-4">
+          <Table<ResourceTableRow>
+            columns={RESOURCE_TABLE_COLUMNS}
+            data={resources}
+            className="w-full"
           />
         </div>
 
-        {/* p95 Latency 차트 */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-semibold text-gray-800">p95 Latency</h3>
-            <Dropdown value={latencyTopN} onChange={setLatencyTopN} options={topNOptions} />
-          </div>
-          <ReactECharts
-            option={latencyChartOption}
-            style={{ height: 250 }}
-            notMerge={true} // 차트 옵션이 변경될 때마다 완전히 새로 고침
-            lazyUpdate={true} // 성능 최적화(지연 업데이트)
-          />
-        </div>
-
-        {/* Errors 차트 */}
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-semibold text-gray-800">Errors</h3>
-            <Dropdown value={errorsTopN} onChange={setErrorsTopN} options={topNOptions} />
-          </div>
-          <ReactECharts
-            option={errorsChartOption}
-            style={{ height: 250 }}
-            notMerge={true} // 차트 옵션이 변경될 때마다 완전히 새로 고침
-            lazyUpdate={true} // 성능 최적화(지연 업데이트)
-          />
-        </div>
-      </div>
-
-      {/* 통계 정보 및 검색 */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="w-64">
-          <SearchInput value={searchQuery} onChange={handleSearch} placeholder="Search Resources" />
-        </div>
-      </div>
-
-      {/* 테이블 */}
-      <div className="mb-4">
-        <Table<ResourceTableRow>
-          columns={RESOURCE_TABLE_COLUMNS}
-          data={resources}
-          className="w-full"
+        {/* 페이지네이션 */}
+        <Pagination
+          page={currentPage}
+          totalPages={totalPages}
+          onPrev={handlePrevPage}
+          onNext={handleNextPage}
         />
-      </div>
-
-      {/* 페이지네이션 */}
-      <Pagination
-        page={currentPage}
-        totalPages={totalPages}
-        onPrev={handlePrevPage}
-        onNext={handleNextPage}
-      />
+      </StateHandler>
     </div>
   );
 }

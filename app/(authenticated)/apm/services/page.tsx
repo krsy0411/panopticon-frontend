@@ -1,9 +1,6 @@
 'use client';
 
 import Table from '@/components/ui/Table';
-import DatabaseIcon from '@/components/icons/services/Database';
-import FrontendIcon from '@/components/icons/services/Frontend';
-import ApiIcon from '@/components/icons/services/Api';
 import ViewModeSelectBox from '../../../../components/features/apm/services/ViewModeSelectBox';
 import PageSizeSelect from '../../../../components/features/apm/services/PageSizeSelect';
 import Pagination from '../../../../components/features/apm/services/Pagination';
@@ -12,83 +9,47 @@ import SearchInput from '@/components/ui/SearchInput';
 import { SelectDate } from '@/components/features/apm/services/SelectDate';
 import { useQuery } from '@tanstack/react-query';
 import { getServices } from '@/src/api/apm';
-import { ApmService, ServiceType } from '@/types/apm';
+import { ServiceSummary } from '@/types/apm';
 import { useRouter } from 'next/navigation';
-
-// 서비스 타입별 아이콘 렌더링 함수
-const renderServiceIcon = (type: ServiceType) => {
-  switch (type) {
-    case 'DB':
-      return <DatabaseIcon size={20} color="#3b82f6" />;
-    case 'WEB':
-      return <FrontendIcon size={20} color="#8b5cf6" />;
-    case 'API':
-    case 'API_GATEWAY':
-      return <ApiIcon size={20} color="#10b981" />;
-    case 'WORKER':
-      return <ApiIcon size={20} color="#f59e0b" />;
-    case 'CACHE':
-      return <DatabaseIcon size={20} color="#06b6d4" />;
-    default:
-      return null;
-  }
-};
 
 const columns = [
   {
-    key: 'service_type' as keyof ApmService,
-    header: 'Type',
-    width: '12%',
-    render: (_value: ApmService[keyof ApmService], row: ApmService) => (
-      <div className="flex items-center gap-2">
-        {renderServiceIcon(row.service_type)}
-        <span className="text-sm text-gray-600">{row.service_type}</span>
-      </div>
-    ),
-  },
-  {
-    key: 'service_name' as keyof ApmService,
+    key: 'service_name' as keyof ServiceSummary,
     header: 'Name',
-    width: '40%',
+    width: '30%',
   },
   {
-    key: 'request_count' as keyof ApmService,
-    header: 'Requests',
-    width: '12%',
-    render: (value: ApmService[keyof ApmService]) => (value as number).toLocaleString(),
-  },
-  {
-    key: 'error_rate' as keyof ApmService,
-    header: 'Error Rate',
-    width: '12%',
-    render: (value: ApmService[keyof ApmService]) => (
-      <span className={(value as number) > 2 ? 'text-red-600 font-semibold' : ''}>
-        {value as number}%
-      </span>
+    key: 'environment' as keyof ServiceSummary,
+    header: 'Environment',
+    width: '15%',
+    render: (value: ServiceSummary[keyof ServiceSummary]) => (
+      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">{value as string}</span>
     ),
   },
   {
-    key: 'p95_latency_ms' as keyof ApmService,
-    header: 'P95 Latency',
-    width: '12%',
-    render: (value: ApmService[keyof ApmService]) => <span>{value as number}ms</span>,
+    key: 'request_count' as keyof ServiceSummary,
+    header: 'Requests',
+    width: '15%',
+    render: (value: ServiceSummary[keyof ServiceSummary]) => (value as number).toLocaleString(),
   },
   {
-    key: 'issues_count' as keyof ApmService,
-    header: 'Issues',
-    width: '12%',
-    render: (value: ApmService[keyof ApmService]) => {
-      const issueCount = value as number;
+    key: 'error_rate' as keyof ServiceSummary,
+    header: 'Error Rate',
+    width: '15%',
+    render: (value: ServiceSummary[keyof ServiceSummary]) => {
+      const errorRate = (value as number) * 100;
       return (
-        <span
-          className={`inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full text-xs font-semibold ${
-            issueCount > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          {issueCount}
+        <span className={errorRate > 2 ? 'text-red-600 font-semibold' : ''}>
+          {errorRate.toFixed(2)}%
         </span>
       );
     },
+  },
+  {
+    key: 'latency_p95_ms' as keyof ServiceSummary,
+    header: 'P95 Latency',
+    width: '15%',
+    render: (value: ServiceSummary[keyof ServiceSummary]) => <span>{value as number}ms</span>,
   },
 ];
 
@@ -101,20 +62,20 @@ export default function ServicesPage() {
   // API 데이터 가져오기
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['services', page, pageSize],
-    queryFn: () => getServices({ page, size: pageSize }),
+    queryFn: () => getServices({ environment: 'prod', limit: pageSize }),
   });
 
   // 페이징 계산
-  const total = data?.total_count || 0;
-  const totalPages = Math.ceil(total / pageSize);
   const services = data?.services || [];
+  const total = services.length;
+  const totalPages = Math.ceil(total / pageSize);
 
   // 페이지 변경 핸들러
   const handlePrev = () => setPage((p) => Math.max(1, p - 1));
   const handleNext = () => setPage((p) => Math.min(totalPages, p + 1));
 
   // 테이블 행 클릭 핸들러
-  const handleServiceRowClick = (service: ApmService) => {
+  const handleServiceRowClick = (service: ServiceSummary) => {
     router.push(`/apm/services/${service.service_name}`);
   };
 
@@ -164,7 +125,7 @@ export default function ServicesPage() {
 
       {viewType === 'list' ? (
         <>
-          <Table<ApmService>
+          <Table<ServiceSummary>
             columns={columns}
             data={services}
             showFavorite={true}

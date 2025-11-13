@@ -5,9 +5,10 @@ import dynamic from 'next/dynamic';
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getServiceTraces } from '@/src/api/apm';
-import { Trace } from '@/types/apm';
+import { TraceSummary } from '@/types/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { formatChartTimeLabel, getXAxisInterval } from '@/src/utils/chartFormatter';
+import StateHandler from '@/components/ui/StateHandler';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false }); // Import from utility
 
@@ -24,7 +25,6 @@ interface TracePoint {
   traceId: string;
   resource: string;
   service: string;
-  statusCode: number;
 }
 
 // 테이블 컬럼 정의
@@ -58,7 +58,7 @@ const TRACE_TABLE_COLUMNS: Array<{
   {
     key: 'duration',
     header: 'DURATION',
-    width: '10%',
+    width: '15%',
     render: (value: TracePoint[keyof TracePoint]) => {
       const ms = Number(value);
       if (ms >= 1000) {
@@ -68,19 +68,19 @@ const TRACE_TABLE_COLUMNS: Array<{
     },
   },
   {
-    key: 'statusCode',
-    header: 'STATUS CODE',
+    key: 'status',
+    header: 'STATUS',
     width: '10%',
-    render: (value: TracePoint[keyof TracePoint], row: TracePoint) => {
-      const code = Number(value);
-      const isError = row.status === 'error';
+    render: (value: TracePoint[keyof TracePoint]) => {
+      const status = String(value);
+      const isError = status === 'error';
       return (
         <span
           className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
             isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
           }`}
         >
-          {code}
+          {isError ? 'ERROR' : 'OK'}
         </span>
       );
     },
@@ -88,7 +88,7 @@ const TRACE_TABLE_COLUMNS: Array<{
   {
     key: 'latencyBreakdown',
     header: 'LATENCY BREAKDOWN',
-    width: '25%',
+    width: '30%',
     sortable: false,
     render: (value: TracePoint[keyof TracePoint]) => {
       const duration = Number(value);
@@ -104,9 +104,9 @@ const TRACE_TABLE_COLUMNS: Array<{
   },
 ];
 
-// Trace를 TracePoint로 변환
-function transformTraceToPoint(trace: Trace): TracePoint {
-  const date = new Date(trace.date);
+// TraceSummary를 TracePoint로 변환
+function transformTraceToPoint(trace: TraceSummary): TracePoint {
+  const date = new Date(trace.start_time);
   const timestamp = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(
     2,
     '0',
@@ -115,11 +115,10 @@ function transformTraceToPoint(trace: Trace): TracePoint {
     timestamp,
     duration: trace.duration_ms,
     latencyBreakdown: trace.duration_ms, // duration과 동일한 값
-    status: trace.error || trace.status_code >= 400 ? 'error' : 'success',
+    status: trace.status === 'ERROR' ? 'error' : 'success',
     traceId: trace.trace_id,
-    resource: trace.resource,
-    service: trace.service,
-    statusCode: trace.status_code,
+    resource: trace.root_span_name,
+    service: trace.service_name,
   };
 }
 
@@ -131,27 +130,29 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
   const { startTime, endTime, interval } = useTimeRangeStore();
 
   // 모든 트레이스 데이터 가져오기 (그래프 및 테이블 공용)
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['serviceTraces', serviceName, startTime, endTime],
     queryFn: () =>
       getServiceTraces(serviceName, {
-        start_time: startTime,
-        end_time: endTime,
+        from: startTime,
+        to: endTime,
+        environment: 'prod',
         page: 1,
-        limit: 1000,
-      }), // 충분히 큰 limit으로 모든 데이터 가져오기
+        size: 500,
+      }),
   });
 
   // 전체 트레이스 데이터 변환 (최신순 정렬)
   const allTraces = useMemo(() => {
     if (!data?.traces) return [];
     const sortedTraces = [...data.traces].sort(
-      (a: Trace, b: Trace) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime(),
     );
     return sortedTraces.map(transformTraceToPoint);
   }, [data]);
 
   const totalCount = allTraces.length;
+  const isEmpty = allTraces.length === 0;
 
   // 현재 페이지의 데이터만 추출 (테이블용)
   const traces = useMemo(() => {
@@ -263,7 +264,6 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
           <div style="margin:2px 0;">Resource: ${trace.resource}</div>
           <div style="margin:2px 0;">Time: ${time}</div>
           <div style="margin:2px 0;">Duration: ${duration} ms</div>
-          <div style="margin:2px 0;">Status: ${trace.statusCode}</div>
         `;
       },
     },
@@ -336,42 +336,34 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
     }
   };
 
-  if (error) {
-    return (
-      <div className="bg-white p-5 rounded-lg border border-gray-200">
-        <div className="text-center text-red-500 py-8">
-          <p className="font-semibold mb-2">Error loading traces</p>
-          <p className="text-sm">{error instanceof Error ? error.message : 'Unknown error'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading && allTraces.length === 0) {
-    return (
-      <div className="bg-white p-5 rounded-lg border border-gray-200">
-        <div className="text-center text-gray-500 py-8">Loading traces...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-white p-5 rounded-lg border border-gray-200">
-      {/* 차트 */}
-      <ReactECharts option={option} style={{ height: 400 }} />
+      <StateHandler
+        isLoading={isLoading}
+        isError={isError}
+        isEmpty={isEmpty}
+        type="chart"
+        height={600}
+        loadingMessage="트레이스 데이터를 불러오는 중..."
+        errorMessage="트레이스 데이터를 불러올 수 없습니다"
+        emptyMessage="선택한 시간 범위에 트레이스가 없습니다"
+      >
+        {/* 차트 */}
+        <ReactECharts option={option} style={{ height: 400 }} />
 
-      {/* 테이블 */}
-      <div className="mt-6">
-        <Table<TracePoint> columns={TRACE_TABLE_COLUMNS} data={traces} className="w-full" />
-      </div>
+        {/* 테이블 */}
+        <div className="mt-6">
+          <Table<TracePoint> columns={TRACE_TABLE_COLUMNS} data={traces} className="w-full" />
+        </div>
 
-      {/* 페이지네이션 */}
-      <Pagination
-        page={currentPage}
-        totalPages={totalPages}
-        onPrev={handlePrevPage}
-        onNext={handleNextPage}
-      />
+        {/* 페이지네이션 */}
+        <Pagination
+          page={currentPage}
+          totalPages={totalPages}
+          onPrev={handlePrevPage}
+          onNext={handleNextPage}
+        />
+      </StateHandler>
     </div>
   );
 }

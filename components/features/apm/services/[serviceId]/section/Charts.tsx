@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getServiceMetrics } from '@/src/api/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { formatChartTimeLabel, getBarWidth } from '@/src/utils/chartFormatter';
+import StateHandler from '@/components/ui/StateHandler';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
@@ -16,27 +17,40 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
   const { startTime, endTime, interval } = useTimeRangeStore();
 
   // API 데이터 가져오기
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['serviceMetrics', serviceName, startTime, endTime, interval],
     queryFn: () =>
       getServiceMetrics(serviceName, {
-        start_time: startTime,
-        end_time: endTime,
+        from: startTime,
+        to: endTime,
         interval: interval,
+        environment: 'prod',
       }),
   });
 
-  // 차트 데이터 변환
+  // 차트 데이터 변환 (새로운 API 응답 형식: 배열 또는 단일 객체)
+  const metricsArray = Array.isArray(data) ? data : data ? [data] : [];
+
+  // 데이터 없음 체크
+  const isEmpty = metricsArray.length === 0 || !metricsArray[0]?.points.length;
+
   const chartData = {
     timestamps:
-      data?.data.latency.map((item) => formatChartTimeLabel(new Date(item.timestamp), interval)) ||
+      metricsArray[0]?.points.map((item) =>
+        formatChartTimeLabel(new Date(item.timestamp), interval),
+      ) || [],
+    requests:
+      metricsArray
+        .find((m) => m.metric_name === 'http_requests_total')
+        ?.points.map((p) => p.value) || [],
+    errors:
+      metricsArray.find((m) => m.metric_name === 'error_rate')?.points.map((p) => p.value * 100) ||
       [],
-    requests: data?.data.requests_and_errors.map((item) => item.hits) || [],
-    errors: data?.data.requests_and_errors.map((item) => item.errors) || [],
     latency: {
-      p90: data?.data.latency.map((item) => item.p90) || [],
-      p95: data?.data.latency.map((item) => item.p95) || [],
-      p99_9: data?.data.latency.map((item) => item.p99_9) || [],
+      p95:
+        metricsArray.find((m) => m.metric_name === 'latency_p95_ms')?.points.map((p) => p.value) ||
+        [],
+      // 추후 다른 레이턴시 퍼센타일도 추가 가능
     },
   };
 
@@ -181,14 +195,6 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
     },
     series: [
       {
-        name: 'p90',
-        type: 'line',
-        data: chartData.latency.p90,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#10b981' },
-      },
-      {
         name: 'p95',
         type: 'line',
         data: chartData.latency.p95,
@@ -196,34 +202,52 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
         symbol: 'none',
         lineStyle: { width: 2, color: '#facc15' },
       },
-      {
-        name: 'p99.9',
-        type: 'line',
-        data: chartData.latency.p99_9,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#ef4444' },
-      },
     ],
   };
-
-  if (isLoading) {
-    return <div className="text-center text-gray-500 p-10">Loading data...</div>;
-  }
 
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-5 rounded-lg border border-gray-200">
-          <ReactECharts option={requestsOption} style={{ height: 300 }} />
+          <StateHandler
+            isLoading={isLoading}
+            isError={isError}
+            isEmpty={isEmpty}
+            type="chart"
+            height={300}
+            loadingMessage="메트릭을 불러오는 중..."
+            emptyMessage="표시할 메트릭 데이터가 없습니다"
+          >
+            <ReactECharts option={requestsOption} style={{ height: 300 }} />
+          </StateHandler>
         </div>
         <div className="bg-white p-5 rounded-lg border border-gray-200">
-          <ReactECharts option={errorsOption} style={{ height: 300 }} />
+          <StateHandler
+            isLoading={isLoading}
+            isError={isError}
+            isEmpty={isEmpty}
+            type="chart"
+            height={300}
+            loadingMessage="메트릭을 불러오는 중..."
+            emptyMessage="표시할 에러 데이터가 없습니다"
+          >
+            <ReactECharts option={errorsOption} style={{ height: 300 }} />
+          </StateHandler>
         </div>
       </div>
 
       <div className="bg-white p-5 rounded-lg border border-gray-200">
-        <ReactECharts option={latencyOption} style={{ height: 340 }} />
+        <StateHandler
+          isLoading={isLoading}
+          isError={isError}
+          isEmpty={isEmpty}
+          type="chart"
+          height={340}
+          loadingMessage="레이턴시 데이터를 불러오는 중..."
+          emptyMessage="표시할 레이턴시 데이터가 없습니다"
+        >
+          <ReactECharts option={latencyOption} style={{ height: 340 }} />
+        </StateHandler>
       </div>
     </>
   );
