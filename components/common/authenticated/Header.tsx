@@ -1,6 +1,6 @@
 'use client';
 
-import { FiBell, FiUser, FiSettings } from 'react-icons/fi';
+import { FiBell, FiUser, FiSettings, FiLayers } from 'react-icons/fi';
 import { useParams } from 'next/navigation';
 import { HeaderDropdown } from './HeaderDropdown';
 import Logo from '@/components/icons/Logo';
@@ -34,8 +34,28 @@ export const AuthenticatedHeader = () => {
     return items;
   }, [appId]);
 
+  // APM 드롭다운 아이템 (동적으로 생성)
+  const apmItems = useMemo(() => {
+    if (!appId) {
+      return [];
+    }
+
+    return [
+      {
+        href: `/apps/${appId}/services`,
+        label: 'Service list',
+        ariaLabel: 'Go to the service list for this app',
+      },
+      {
+        href: `/apps/${appId}/services/user-service`,
+        label: 'Summary',
+        ariaLabel: 'Go to the summary view for user-service',
+      },
+    ];
+  }, [appId]);
+
   return (
-    <header className="sticky top-0 left-0 right-0 z-50 bg-white shadow-md">
+    <header className="sticky top-0 left-0 right-0 z-50 bg-white shadow-md font-sans">
       <div className="flex items-center px-6 py-4">
         <div className="shrink-0">
           <Logo />
@@ -44,6 +64,15 @@ export const AuthenticatedHeader = () => {
         {/* 오른쪽 아이콘들: Setting 드롭다운 */}
         <div className="ml-auto flex items-center gap-6">
           <div className="flex items-center gap-5">
+            {apmItems.length > 0 && (
+              <HeaderDropdown
+                triggerIcon={<FiLayers className="w-6 h-6 text-zinc-700" />}
+                triggerLabel="APM menu"
+                triggerHref={`/apps/${appId}/services`}
+                title="APM"
+                items={apmItems}
+              />
+            )}
             <HeaderDropdown
               triggerIcon={<FiSettings className="w-6 h-6 text-zinc-700" />}
               triggerLabel="Setting menu"

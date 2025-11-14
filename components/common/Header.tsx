@@ -6,7 +6,7 @@ import Button from '../ui/Button';
 
 export default function UnAuthenticatedHeader({ handleNavigate }: { handleNavigate: () => void }) {
   return (
-    <header className="sticky top-0 left-0 right-0 z-50 bg-white shadow-md">
+    <header className="sticky top-0 left-0 right-0 z-50 bg-white shadow-md font-sans">
       <div className="flex items-center px-6 py-4">
         <div className="shrink-0">
           <Logo />

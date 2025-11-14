@@ -5,12 +5,12 @@ import FilterBar from '../logs/FilterBar';
 import StatGrid from '../../../../../ui/StatGrid';
 import LogList from '../logs/LogList';
 import Pagination from '../../Pagination';
-import LogDetail from '../../../../../analysis/LogDetail';
 import { useQuery } from '@tanstack/react-query';
 import { getLogs } from '@/src/api/apm';
 import { LogLevel, LogEntry, LogItem } from '@/types/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { useErrorLogsWebSocket } from '@/src/hooks/useErrorLogsWebSocket';
+import LogAnalysis from '@/components/analysis/LogAnalysis';
 
 interface LogsSectionProps {
   serviceName: string;
@@ -204,7 +204,7 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
         <Pagination page={page} totalPages={totalPages} onPrev={handlePrev} onNext={handleNext} />
       </section>
 
-      <LogDetail log={selectedLog} isOpen={isPanelOpen} onClose={handleClosePanel} />
+      <LogAnalysis log={selectedLog} isOpen={isPanelOpen} onClose={handleClosePanel} />
     </>
   );
 }

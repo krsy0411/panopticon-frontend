@@ -1,8 +1,5 @@
 'use client';
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
-import { getServiceErrors } from '@/src/api/apm';
 import LogsSection from '@/components/features/apps/services/[serviceId]/section/Logs';
 import { SelectDate } from '@/components/features/apps/services/SelectDate';
 import TracesSection from '@/components/features/apps/services/[serviceId]/section/Traces';
@@ -12,7 +9,6 @@ import ResourcesSection from '@/components/features/apps/services/[serviceId]/se
 import { useParams } from 'next/navigation';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import type { TimeRange as TimeRangeType } from '@/src/utils/timeRange';
-import ErrorsSection from '@/components/features/apps/services/[serviceId]/section/Errors';
 import { HiArrowLeft } from 'react-icons/hi2';
 
 export default function ServiceOverview() {
@@ -22,26 +18,12 @@ export default function ServiceOverview() {
   const appId = params.appId as string;
 
   // Zustand store 사용
-  const { timeRange, setTimeRange, startTime, endTime } = useTimeRangeStore();
+  const { timeRange, setTimeRange } = useTimeRangeStore();
 
   // 서비스 목록으로 돌아가기
   const handleBackToServices = () => {
     router.push(`/apps/${appId}/services`);
   };
-
-  // 서비스 존재 여부 검증 (첫 API 요청으로 확인)
-  const { isError: serviceNotFound } = useQuery({
-    queryKey: ['serviceValidation', serviceId, startTime, endTime],
-    queryFn: () => getServiceErrors(serviceId, { from: startTime, to: endTime, limit: 1 }), // 가장 가벼운 API로 검증
-    retry: false, // 404면 재시도 안함
-  });
-
-  // 서비스가 존재하지 않으면 404 페이지로 리다이렉트
-  useEffect(() => {
-    if (serviceNotFound) {
-      router.push('/not-found');
-    }
-  }, [serviceNotFound, router]);
 
   const handleTimeRangeChange = (range: TimeRange) => {
     setTimeRange(range.value as TimeRangeType);
@@ -52,11 +34,6 @@ export default function ServiceOverview() {
     label: timeRange === '1h' ? '1 hour' : timeRange,
     value: timeRange,
   };
-
-  // 검증 중이거나 404일 경우 렌더링 안함
-  if (serviceNotFound) {
-    return null;
-  }
 
   return (
     <div className="space-y-8">
@@ -102,7 +79,8 @@ export default function ServiceOverview() {
       {/* 에러 영역 */}
       <div id="errors" className="pt-4 scroll-mt-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-2">Errors</h2>
-        <ErrorsSection serviceName={serviceId} />
+        <div className="bg-white p-5 rounded-lg border border-gray-200">준비 중...</div>
+        {/* <ErrorsSection serviceName={serviceId} /> */}
       </div>
 
       {/* 로그 영역 */}
