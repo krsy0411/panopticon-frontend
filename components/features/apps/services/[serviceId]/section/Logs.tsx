@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import FilterBar from '../logs/FilterBar';
 import StatGrid from '../../../../../ui/StatGrid';
 import LogList from '../logs/LogList';
@@ -8,8 +8,9 @@ import Pagination from '../../Pagination';
 import LogDetail from '../../../../../analysis/LogDetail';
 import { useQuery } from '@tanstack/react-query';
 import { getLogs } from '@/src/api/apm';
-import { LogLevel, LogEntry } from '@/types/apm';
+import { LogLevel, LogEntry, LogItem } from '@/types/apm';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
+import { useErrorLogsWebSocket } from '@/src/hooks/useErrorLogsWebSocket';
 
 interface LogsSectionProps {
   serviceName: string;
@@ -24,7 +25,21 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
+  // 웹소켓으로 받은 실시간 에러 로그를 누적하는 상태
+  const [realtimeLogs, setRealtimeLogs] = useState<LogItem[]>([]);
+
   const { startTime, endTime } = useTimeRangeStore();
+
+  // 웹소켓으로 에러 로그 수신
+  const handleLogReceived = useCallback((log: LogItem) => {
+    setRealtimeLogs((prev) => [log, ...prev]); // 최신 로그를 맨 앞에 추가
+  }, []);
+
+  useErrorLogsWebSocket({
+    serviceName,
+    onLogReceived: handleLogReceived,
+    enabled: true,
+  });
 
   // 로그 목록 가져오기 (새 API)
   const { data: logsData } = useQuery({
@@ -39,11 +54,11 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
       }),
   });
 
-  // 로그 데이터 변환
-  const logs = useMemo(() => {
+  // API 로그 데이터 변환
+  const apiLogs = useMemo(() => {
     if (!logsData?.items) return [];
     return logsData.items.map((log) => ({
-      id: `${log.service_name}-${log.timestamp}`,
+      id: `api-${log.service_name}-${log.timestamp}`,
       level: log.level as LogLevel,
       service: log.service_name,
       traceId: log.trace_id || '',
@@ -52,26 +67,44 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
     }));
   }, [logsData]);
 
-  const stats = useMemo(() => {
-    if (!logsData) return [];
+  // 실시간 로그 데이터 변환
+  const realtimeLogEntries = useMemo(() => {
+    return realtimeLogs.map((log) => ({
+      id: `ws-${log.service_name}-${log.timestamp}`,
+      level: log.level as LogLevel,
+      service: log.service_name,
+      traceId: log.trace_id || '',
+      message: log.message,
+      timestamp: new Date(log.timestamp).toLocaleString('ko-KR'),
+    }));
+  }, [realtimeLogs]);
 
+  // API 로그 + 실시간 로그 병합 (실시간 로그가 먼저 표시됨)
+  const logs = useMemo(() => {
+    return [...realtimeLogEntries, ...apiLogs];
+  }, [realtimeLogEntries, apiLogs]);
+
+  const stats = useMemo(() => {
     // TODO: 백엔드에서 level_counts 필드를 제공하면 아래 코드로 교체
     // const errorCount = logsData.level_counts?.ERROR ?? 0;
     // const warnCount = logsData.level_counts?.WARN ?? 0;
     // const infoCount = logsData.level_counts?.INFO ?? 0;
     //
-    // 현재는 페이지네이션된 100개 로그만으로 계산하므로 정확하지 않음
+    // 현재는 API 로그 + 실시간 로그를 합쳐서 계산
     const errorCount = logs.filter((l) => l.level === 'ERROR').length;
     const warnCount = logs.filter((l) => l.level === 'WARN').length;
     const infoCount = logs.filter((l) => l.level === 'INFO').length;
 
+    // 총 로그 수 = API 로그 총 개수 + 실시간 로그 개수
+    const totalCount = (logsData?.total ?? 0) + realtimeLogs.length;
+
     return [
-      { id: 'total', label: '총 로그', value: logsData.total, tone: 'neutral' as const },
+      { id: 'total', label: '총 로그', value: totalCount, tone: 'neutral' as const },
       { id: 'error', label: '에러', value: errorCount, tone: 'danger' as const },
       { id: 'warn', label: '경고', value: warnCount, tone: 'warning' as const },
       { id: 'info', label: '정보', value: infoCount, tone: 'info' as const },
     ];
-  }, [logs, logsData]);
+  }, [logs, logsData, realtimeLogs.length]);
 
   const services: string[] = useMemo(() => {
     const serviceSet = new Set(logs.map((l: { service: string }) => l.service));
