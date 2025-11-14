@@ -203,6 +203,8 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
         to: endTime,
         limit: 100,
       }),
+    retry: false, // API 오류 시 재시도 하지 않음
+    throwOnError: false, // 오류를 throw하지 않고 isError 상태로만 처리
   });
 
   // 전체 데이터 변환

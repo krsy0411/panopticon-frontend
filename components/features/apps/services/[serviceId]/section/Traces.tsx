@@ -140,8 +140,10 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
         from: startTime,
         to: endTime,
         page: 1,
-        size: 500,
+        size: 199, // TODO : 현재 최대 199개까지만 조회 가능
       }),
+    retry: false, // API 오류 시 재시도 하지 않음
+    throwOnError: false, // 오류를 throw하지 않고 isError 상태로만 처리
   });
 
   // 전체 트레이스 데이터 변환 (최신순 정렬)

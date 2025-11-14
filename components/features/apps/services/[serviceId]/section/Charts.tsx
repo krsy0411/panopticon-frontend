@@ -26,6 +26,8 @@ export default function ChartsSection({ serviceName }: ChartsProps) {
         interval: interval,
         environment: 'prod',
       }),
+    retry: false, // API 오류 시 재시도 하지 않음
+    throwOnError: false, // 오류를 throw하지 않고 isError 상태로만 처리
   });
 
   // 차트 데이터 변환 (새로운 API 응답 형식: 배열 또는 단일 객체)

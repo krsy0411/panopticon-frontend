@@ -19,6 +19,8 @@ export default function ErrorsSection({ serviceName }: ErrorsSectionProps) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['serviceErrors', serviceName, startTime, endTime],
     queryFn: () => getServiceErrors(serviceName, { from: startTime, to: endTime }),
+    retry: false, // API 오류 시 재시도 하지 않음
+    throwOnError: false, // 오류를 throw하지 않고 isError 상태로만 처리
   });
 
   const isEmpty = !data || data.errors.length === 0;

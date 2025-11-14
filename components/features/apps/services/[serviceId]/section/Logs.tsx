@@ -52,6 +52,8 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
         to: endTime,
         size: 60,
       }),
+    retry: false, // API 오류 시 재시도 하지 않음
+    throwOnError: false, // 오류를 throw하지 않고 isError 상태로만 처리
   });
 
   // API 로그 데이터 변환
