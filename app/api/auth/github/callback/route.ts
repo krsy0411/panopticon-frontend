@@ -121,7 +121,14 @@ export async function GET(request: NextRequest) {
     });
 
     // 5. 쿠키에 JWT 저장하고 메인 페이지로 리다이렉트
-    const response = NextResponse.redirect(new URL('/apps', request.url));
+    // 프로덕션에서는 실제 호스트를 사용, 개발에서는 request.url 사용
+    const host = request.headers.get('host');
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    const baseUrl = host && !host.includes('0.0.0.0') && !host.match(/^[a-f0-9]{12}:/)
+      ? `${protocol}://${host}`
+      : request.url.replace(/\/api\/auth\/github\/callback.*$/, '');
+
+    const response = NextResponse.redirect(`${baseUrl}/apps`);
     response.cookies.set('auth-token', jwt, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
