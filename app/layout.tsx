@@ -4,13 +4,7 @@ import './globals.css';
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import QueryProvider from '@/src/providers/QueryProvider';
-import dynamic from 'next/dynamic';
-
-// MSW는 개발 환경에서만 동적으로 import
-const MswProvider = dynamic(() => import('@/mocks/MswProvider'), {
-  ssr: false,
-  loading: () => null,
-});
+import MswProvider from '@/src/providers/ConditionalMswProvider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
