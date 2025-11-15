@@ -55,10 +55,6 @@ README.md
 DEPLOYMENT.md
 *.md
 
-# MSW 관련 파일 (개발 전용)
-mocks
-public/mockServiceWorker.js
-
 # Misc
 .eslintcache
 .prettierignore

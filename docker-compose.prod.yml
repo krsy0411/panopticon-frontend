@@ -15,8 +15,6 @@ services:
       # API 서버 주소
       - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-https://api.jungle-panopticon.cloud/query}
       - NEXT_PUBLIC_WS_ERROR_LOGS_URL=${NEXT_PUBLIC_WS_ERROR_LOGS_URL:-https://api.jungle-panopticon.cloud/ws/error-logs}
-      # MSW 비활성화
-      - NEXT_PUBLIC_ENABLE_MOCKING=false
       # JWT Secret
       - JWT_SECRET=${JWT_SECRET}
       # GitHub OAuth
