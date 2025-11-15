@@ -1,22 +1,19 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import Logo from '@/components/icons/Logo';
 import { FaGithub } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 
 export default function LoginPage() {
-  const router = useRouter();
-
   const handleGithubLogin = () => {
-    // TODO: GitHub OAuth 연동
-    router.push('/apps');
+    // GitHub OAuth 로그인 시작
+    window.location.href = '/api/auth/github';
   };
 
   const handleGoogleLogin = () => {
-    // TODO: Google OAuth 연동
-    router.push('/apps');
+    // Google OAuth 로그인 시작
+    window.location.href = '/api/auth/google';
   };
 
   return (

@@ -1,38 +1,87 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { HiCube, HiArrowTrendingUp, HiExclamationTriangle } from 'react-icons/hi2';
+import { useQueryClient } from '@tanstack/react-query';
+import { HiCube, HiPencil, HiTrash } from 'react-icons/hi2';
 import type { ApplicationSummary } from './types';
 
-function DiffBadge({ diff }: { diff: number }) {
-  if (diff === 0) {
-    return <span className="text-gray-500 text-xs">(0)</span>;
-  }
-
-  const isUp = diff > 0;
-
-  return (
-    <span className={`text-xs font-semibold ml-1 ${isUp ? 'text-red-600' : 'text-emerald-600'}`}>
-      ({isUp ? `+${diff}` : diff})
-    </span>
-  );
+interface AppCardProps {
+  app: ApplicationSummary;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export function AppCard({ app }: { app: ApplicationSummary }) {
+export function AppCard({ app, onEdit, onDelete }: AppCardProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const handleClick = () => {
+  const formatDateTime = (iso?: string | null) => {
+    if (!iso) return '-';
+    const date = new Date(iso);
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  };
+
+  const updateCachedLastAccess = (timestamp: string) => {
+    queryClient.setQueryData<ApplicationSummary[] | undefined>(['apps'], (prev) => {
+      if (!prev) return prev;
+      return prev.map((item) =>
+        item.id === app.id ? { ...item, lastAccessedAt: timestamp } : item,
+      );
+    });
+  };
+
+  const recordLastAccess = async () => {
+    const fallback = new Date().toISOString();
+
+    try {
+      const response = await fetch(`/api/apps/${app.id}/access`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        updateCachedLastAccess(fallback);
+        return;
+      }
+
+      const data = (await response.json()) as { lastAccessedAt?: string | null };
+      updateCachedLastAccess(data.lastAccessedAt ?? fallback);
+    } catch (error) {
+      console.error('Failed to record last access', error);
+      updateCachedLastAccess(fallback);
+    }
+  };
+
+  const handleNavigate = () => {
+    recordLastAccess();
     router.push(`/apps/${app.id}/services`);
+  };
+
+  const handleEditClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    onEdit?.();
+  };
+
+  const handleDeleteClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    onDelete?.();
   };
 
   return (
     <article
-      onClick={handleClick}
-      className="
-        group cursor-pointer rounded-2xl border border-slate-200 bg-white p-6
+      onClick={handleNavigate}
+      className={`
+        group cursor-pointer rounded-2xl border bg-white p-6 flex flex-col
         hover:shadow-lg hover:shadow-blue-100 hover:-translate-y-[3px]
-        hover:border-blue-300 transition-all min-h-[340px]
-      "
+        transition-all min-h-[340px]
+        border-slate-200 hover:border-blue-300
+      `}
     >
       {/* 헤더 */}
       <header className="mb-6">
@@ -43,7 +92,7 @@ export function AppCard({ app }: { app: ApplicationSummary }) {
 
           <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
             <HiCube className="h-4 w-4" />
-            {app.serviceCount}
+            서비스 모니터링
           </span>
         </div>
 
@@ -52,35 +101,38 @@ export function AppCard({ app }: { app: ApplicationSummary }) {
         )}
       </header>
 
-      {/* 메트릭 */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        {/* 에러 수 */}
-        <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
-          <p className="flex items-center gap-1 text-xs font-medium text-slate-500 mb-1">
-            <HiExclamationTriangle className="h-4 w-4" />
-            에러 수
-          </p>
-          <p className="text-lg font-bold text-slate-900 flex items-center">
-            {(app.errorCount ?? 0).toLocaleString()}
-            <DiffBadge diff={app.errorDiff ?? 0} />
-          </p>
+      {/* 설명이 없을 경우 안내 문구 */}
+      {!app.description && (
+        <p className="text-sm text-slate-400 mb-6">
+          어플리케이션 별로 서비스 상태를 확인할 수 있습니다.
+        </p>
+      )}
+
+      {/* 생성/수정일 + 액션 */}
+      <footer className="mt-auto flex items-center justify-between gap-4 text-xs text-slate-500 border-t pt-4 border-slate-200">
+        <div className="flex flex-col gap-1">
+          <span className="whitespace-nowrap">생성일: {formatDateTime(app.createdAt)}</span>
+          <span className="whitespace-nowrap">
+            접속일: {formatDateTime(app.lastAccessedAt ?? app.createdAt)}
+          </span>
         </div>
 
-        {/* 요청 수 */}
-        <div className="rounded-xl bg-slate-50 p-4 border border-slate-100">
-          <p className="flex items-center gap-1 text-xs font-medium text-slate-500 mb-1">
-            <HiArrowTrendingUp className="h-4 w-4" />총 요청 수
-          </p>
-          <p className="text-lg font-bold text-slate-900 flex items-center">
-            {(app.requestCount ?? 0).toLocaleString()}
-            <DiffBadge diff={app.requestDiff ?? 0} />
-          </p>
+        <div className="flex items-center gap-2 text-sm">
+          <button
+            type="button"
+            onClick={handleEditClick}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 hover:border-blue-500 hover:text-blue-600 whitespace-nowrap"
+          >
+            <HiPencil className="h-4 w-4" /> 수정
+          </button>
+          <button
+            type="button"
+            onClick={handleDeleteClick}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-slate-600 hover:border-red-500 hover:text-red-600 whitespace-nowrap"
+          >
+            <HiTrash className="h-4 w-4" /> 삭제
+          </button>
         </div>
-      </div>
-
-      {/* 생성일 */}
-      <footer className="flex justify-between text-xs text-slate-500 border-t pt-4 border-slate-200">
-        <span>생성일: {app.createdAt}</span>
       </footer>
     </article>
   );

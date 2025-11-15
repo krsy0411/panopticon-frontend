@@ -1,8 +1,9 @@
 'use client';
 
-import { FiBell, FiUser, FiSettings, FiLayers } from 'react-icons/fi';
+import { FiBell, FiSettings, FiLayers } from 'react-icons/fi';
 import { useParams } from 'next/navigation';
 import { HeaderDropdown } from './HeaderDropdown';
+import { UserProfile } from './UserProfile';
 import Logo from '@/components/icons/Logo';
 import { useMemo } from 'react';
 
@@ -90,9 +91,7 @@ export const AuthenticatedHeader = () => {
             <button className="hover:text-blue-600 transition">
               <FiBell className="w-7 h-7 text-zinc-700" />
             </button>
-            <button className="hover:text-blue-600 transition">
-              <FiUser className="w-7 h-7 text-zinc-700" />
-            </button>
+            <UserProfile />
           </div>
         </div>
       </div>

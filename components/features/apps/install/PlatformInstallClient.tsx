@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { IoArrowBack } from 'react-icons/io5';
 import { StepIndicator } from './docker/StepIndicator';
 import { InstallStep, MonitoringOptions, PlatformType, StepConfig } from '@/types/agent-install';
-import { platformsData } from '@/app/(authenticated)/setting/install/platforms';
+import { platformsData } from '@/components/features/apps/install/platforms';
 import {
   DockerStepOne,
   DockerStepThree,
@@ -128,7 +128,7 @@ export default function PlatformInstallClient({ platformKey }: Props) {
         </div>
 
         {/* Installation Steps */}
-        {platform.steps.map((step, index) => (
+        {platform.steps.map((step: (typeof platform.steps)[number], index: number) => (
           <div key={index} className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
             <h2 className="mb-4 text-xl font-semibold text-gray-900">{step.title}</h2>
 

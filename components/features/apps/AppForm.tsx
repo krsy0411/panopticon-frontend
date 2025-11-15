@@ -1,17 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { HiPlus } from 'react-icons/hi2';
+import { HiPlus, HiPencil } from 'react-icons/hi2';
 
 interface AppFormProps {
   onCreate?: (name: string, description?: string) => Promise<void> | void;
   onClose?: () => void;
+  initialName?: string;
+  initialDescription?: string;
 }
 
-export function AppForm({ onCreate, onClose }: AppFormProps) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+export function AppForm({
+  onCreate,
+  onClose,
+  initialName = '',
+  initialDescription = '',
+}: AppFormProps) {
+  const [name, setName] = useState(() => initialName);
+  const [description, setDescription] = useState(() => initialDescription || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isEditMode = !!initialName;
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -74,8 +83,8 @@ export function AppForm({ onCreate, onClose }: AppFormProps) {
           disabled={isSubmitting || !name.trim()}
           className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <HiPlus className="h-4 w-4" />
-          {isSubmitting ? '생성 중...' : '생성'}
+          {isEditMode ? <HiPencil className="h-4 w-4" /> : <HiPlus className="h-4 w-4" />}
+          {isSubmitting ? (isEditMode ? '수정 중...' : '생성 중...') : isEditMode ? '수정' : '생성'}
         </button>
       </div>
     </form>

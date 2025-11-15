@@ -6,6 +6,20 @@ const nextConfig: NextConfig = {
   // - Next.js API Routes를 사용하지 않음 (app/api/ 폴더 없음)
   // - 클라이언트에서 백엔드 ALB로 직접 요청
   // - CORS는 백엔드 서버(AWS ALB)에서 처리 필요
+
+  // 외부 이미지 호스트 허용 (GitHub, Google 프로필 이미지)
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+    ],
+  },
 };
 
 export default nextConfig;

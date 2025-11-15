@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { HiArrowPath, HiPlus, HiPencil, HiTrash } from 'react-icons/hi2';
-import type { ApplicationSummary } from '@/components/features/apps/types';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { HiArrowPath, HiPlus } from 'react-icons/hi2';
 import { AppForm } from '@/components/features/apps/AppForm';
 import { AppList } from '@/components/features/apps/AppList';
 import {
@@ -12,86 +12,91 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/register/dialog';
+import { fetchApps, createApp, updateApp, deleteApp } from '@/lib/api/apps';
 
 export default function RegisterPage() {
-  const [apps, setApps] = useState<ApplicationSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState(false);
+  const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedAppId, setSelectedAppId] = useState<string | undefined>();
 
-  const fetchApplications = async () => {
-    try {
-      setIsError(false);
-      setIsLoading(true);
+  // 앱 목록 조회
+  const {
+    data: apps = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['apps'],
+    queryFn: fetchApps,
+  });
 
-      // TODO: 이후 API 연동 시 fetch('/api/applications') 로 변경
-      await new Promise((r) => setTimeout(r, 600)); // mock delay
+  // 선택된 앱 정보
+  const selectedApp = apps.find((app) => app.id === selectedAppId);
 
-      const mockApps: ApplicationSummary[] = [
-        {
-          id: '1',
-          name: 'Bank',
-          description: '뱅크 주요 기능 모음',
-          serviceCount: 8,
+  // 앱 생성 mutation
+  const createMutation = useMutation({
+    mutationFn: createApp,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['apps'] });
+      setIsCreateDialogOpen(false);
+    },
+    onError: (error) => {
+      console.error('[App Register] Create failed:', error);
+    },
+  });
 
-          errorCount: 38,
-          errorDiff: +3,
+  // 앱 수정 mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; description?: string } }) =>
+      updateApp(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['apps'] });
+      setIsEditDialogOpen(false);
+      setSelectedAppId(undefined);
+    },
+    onError: (error) => {
+      console.error('[App Register] Update failed:', error);
+    },
+  });
 
-          requestCount: 120000,
-          requestDiff: -900,
+  // 앱 삭제 mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteApp,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['apps'] });
+      setSelectedAppId(undefined);
+    },
+    onError: (error) => {
+      console.error('[App Register] Delete failed:', error);
+    },
+  });
 
-          createdAt: '2025-10-12',
-        },
-        {
-          id: '2',
-          name: 'Map',
-          description: '지도 검색/길찾기 기능',
-          serviceCount: 5,
+  const handleCreate = async (name: string, description?: string) => {
+    await createMutation.mutateAsync({ name, description });
+  };
 
-          errorCount: 12,
-          errorDiff: -2,
+  const handleEdit = async (name: string, description?: string) => {
+    if (!selectedAppId) return;
+    await updateMutation.mutateAsync({
+      id: selectedAppId,
+      data: { name, description },
+    });
+  };
 
-          requestCount: 78000,
-          requestDiff: +1400,
+  const handleDelete = (id: string) => {
+    if (deleteMutation.isPending) {
+      return;
+    }
 
-          createdAt: '2025-09-02',
-        },
-        {
-          id: '3',
-          name: 'Mall',
-          description: '쇼핑/상품 브라우징 기능',
-          serviceCount: 12,
-
-          errorCount: 4,
-          errorDiff: 0,
-
-          requestCount: 240000,
-          requestDiff: +6000,
-
-          createdAt: '2025-07-21',
-        },
-      ];
-
-      setApps(mockApps);
-    } catch (error) {
-      console.error('[App Register] fetchApplications failed', error);
-      setIsError(true);
-    } finally {
-      setIsLoading(false);
+    if (confirm('정말로 이 애플리케이션을 삭제하시겠습니까?')) {
+      deleteMutation.mutate(id);
     }
   };
 
-  useEffect(() => {
-    fetchApplications();
-  }, []);
-
-  const handleCreate = async (name: string, description?: string) => {
-    console.info('[App Register] Creating application', { name, description });
-
-    // TODO: 실제 API 호출
-    await new Promise((r) => r(null));
-
-    fetchApplications();
+  const handleOpenEditDialog = (id: string) => {
+    setSelectedAppId(id);
+    setIsEditDialogOpen(true);
   };
 
   return (
@@ -114,24 +119,9 @@ export default function RegisterPage() {
               <HiPlus className="h-4 w-4" />
               생성
             </button>
-            <button
-              disabled
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-400 cursor-not-allowed"
-            >
-              <HiPencil className="h-4 w-4" />
-              수정
-            </button>
-            <button
-              disabled
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-400 cursor-not-allowed"
-            >
-              <HiTrash className="h-4 w-4" />
-              삭제
-            </button>
           </div>
         </div>
 
-        {/* 메인 컨텐츠 */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center rounded-lg border border-slate-200 bg-white p-16 text-center">
             <HiArrowPath className="mb-3 h-8 w-8 animate-spin text-blue-600" />
@@ -143,7 +133,7 @@ export default function RegisterPage() {
           <div className="rounded-lg border border-red-200 bg-red-50 p-8 text-center">
             <p className="text-red-600">데이터를 불러오는데 실패했습니다.</p>
             <button
-              onClick={fetchApplications}
+              onClick={() => refetch()}
               className="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
             >
               <HiArrowPath className="h-4 w-4" />
@@ -152,7 +142,9 @@ export default function RegisterPage() {
           </div>
         )}
 
-        {!isLoading && !isError && <AppList apps={apps} />}
+        {!isLoading && !isError && (
+          <AppList apps={apps} onEditApp={handleOpenEditDialog} onDeleteApp={handleDelete} />
+        )}
       </div>
 
       {/* 생성 다이얼로그 */}
@@ -164,7 +156,32 @@ export default function RegisterPage() {
               모니터링할 애플리케이션 정보를 입력하세요.
             </DialogDescription>
           </DialogHeader>
-          <AppForm onCreate={handleCreate} onClose={() => setIsCreateDialogOpen(false)} />
+          <AppForm
+            key="create-form"
+            onCreate={handleCreate}
+            onClose={() => setIsCreateDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* 수정 다이얼로그 */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[550px]">
+          <DialogHeader>
+            <DialogTitle>애플리케이션 수정</DialogTitle>
+            <DialogDescription className="text-slate-500">
+              수정할 애플리케이션 정보를 입력하세요.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedApp && (
+            <AppForm
+              key={selectedApp.id}
+              onCreate={handleEdit}
+              onClose={() => setIsEditDialogOpen(false)}
+              initialName={selectedApp.name}
+              initialDescription={selectedApp.description}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
