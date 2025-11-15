@@ -34,11 +34,6 @@ export default function ServiceOverview() {
         </div>
       </div>
 
-      <div id="resources" className="pt-4 scroll-mt-8">
-        <h2 className="text-xl font-semibold text-gray-800 mb-2">Overview</h2>
-        <ResourcesSection serviceName={serviceId} />
-      </div>
-
       <ChartsSection serviceName={serviceId} />
 
       <div id="resources" className="pt-4 scroll-mt-8">

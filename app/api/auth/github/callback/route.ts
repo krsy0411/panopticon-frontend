@@ -124,9 +124,10 @@ export async function GET(request: NextRequest) {
     // 프로덕션에서는 실제 호스트를 사용, 개발에서는 request.url 사용
     const host = request.headers.get('host');
     const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-    const baseUrl = host && !host.includes('0.0.0.0') && !host.match(/^[a-f0-9]{12}:/)
-      ? `${protocol}://${host}`
-      : request.url.replace(/\/api\/auth\/github\/callback.*$/, '');
+    const baseUrl =
+      host && !host.includes('0.0.0.0') && !host.match(/^[a-f0-9]{12}:/)
+        ? `${protocol}://${host}`
+        : request.url.replace(/\/api\/auth\/github\/callback.*$/, '');
 
     const response = NextResponse.redirect(`${baseUrl}/apps`);
     response.cookies.set('auth-token', jwt, {

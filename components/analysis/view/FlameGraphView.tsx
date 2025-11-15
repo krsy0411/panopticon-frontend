@@ -32,44 +32,40 @@ export default function FlameGraphView({ spans, onSpanSelect }: FlameGraphViewPr
     const blocks: FlameBlock[] = [];
     let maxDepthFound = 0;
 
+    // 루트 스팬의 시작 시간과 duration을 기준으로 사용
+    const rootStartTime = new Date(rootSpan.timestamp).getTime();
+    const rootDuration = rootSpan.duration_ms;
+
     // 재귀적으로 블록 생성
-    const buildBlocks = (
-      span: SpanItem,
-      depth: number,
-      parentStart: number,
-      parentWidth: number,
-    ) => {
+    const buildBlocks = (span: SpanItem, depth: number) => {
       maxDepthFound = Math.max(maxDepthFound, depth);
+
+      // 스팬의 실제 시작 시간을 기준으로 offset 계산
+      const spanStartTime = new Date(span.timestamp).getTime();
+      const spanDuration = span.duration_ms;
+
+      // 루트 스팬 기준으로 상대적 위치와 너비 계산
+      const startOffset = (spanStartTime - rootStartTime) / rootDuration;
+      const widthRatio = spanDuration / rootDuration;
 
       // 현재 스팬의 블록 추가
       blocks.push({
         span,
         depth,
-        startOffset: parentStart,
-        widthRatio: parentWidth,
+        startOffset,
+        widthRatio,
       });
 
       // 자식 스팬들 찾기
       const children = spans.filter((s) => s.parent_span_id === span.span_id);
 
-      if (children.length > 0) {
-        // 자식들의 총 duration
-        const childrenTotalDuration = children.reduce((sum, child) => sum + child.duration_ms, 0);
-
-        let currentOffset = parentStart;
-
-        children.forEach((child) => {
-          // 자식의 너비 비율 (부모의 너비 * 자식 duration / 자식들 총 duration)
-          const childWidthRatio = parentWidth * (child.duration_ms / childrenTotalDuration);
-
-          buildBlocks(child, depth + 1, currentOffset, childWidthRatio);
-
-          currentOffset += childWidthRatio;
-        });
-      }
+      // 자식들을 재귀적으로 처리
+      children.forEach((child) => {
+        buildBlocks(child, depth + 1);
+      });
     };
 
-    buildBlocks(rootSpan, 0, 0, 1);
+    buildBlocks(rootSpan, 0);
 
     return {
       flameBlocks: blocks,
