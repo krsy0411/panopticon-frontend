@@ -3,8 +3,10 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     console.log('[GitHub OAuth] Starting authentication flow');
-    console.log('[GitHub OAuth] GITHUB_CLIENT_ID:', process.env.GITHUB_CLIENT_ID ? 'SET' : 'MISSING');
-    console.log('[GitHub OAuth] GITHUB_REDIRECT_URI:', process.env.GITHUB_REDIRECT_URI ? 'SET' : 'MISSING');
+    console.log('[GitHub OAuth] All env vars:', Object.keys(process.env).filter(k => k.includes('GITHUB') || k.includes('GOOGLE') || k.includes('JWT')));
+    console.log('[GitHub OAuth] GITHUB_CLIENT_ID:', process.env.GITHUB_CLIENT_ID);
+    console.log('[GitHub OAuth] GITHUB_REDIRECT_URI:', process.env.GITHUB_REDIRECT_URI);
+    console.log('[GitHub OAuth] GITHUB_CLIENT_SECRET:', process.env.GITHUB_CLIENT_SECRET ? 'SET' : 'MISSING');
 
     const clientId = process.env.GITHUB_CLIENT_ID;
     const redirectUri = process.env.GITHUB_REDIRECT_URI;
