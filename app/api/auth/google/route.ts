@@ -3,14 +3,23 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     console.log('[Google OAuth] Starting authentication flow');
-    console.log('[Google OAuth] GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID ? 'SET' : 'MISSING');
-    console.log('[Google OAuth] GOOGLE_REDIRECT_URI:', process.env.GOOGLE_REDIRECT_URI ? 'SET' : 'MISSING');
+    console.log(
+      '[Google OAuth] GOOGLE_CLIENT_ID:',
+      process.env.GOOGLE_CLIENT_ID ? 'SET' : 'MISSING',
+    );
+    console.log(
+      '[Google OAuth] GOOGLE_REDIRECT_URI:',
+      process.env.GOOGLE_REDIRECT_URI ? 'SET' : 'MISSING',
+    );
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
     if (!clientId || !redirectUri) {
-      console.error('[Google OAuth] Missing configuration:', { clientId: !!clientId, redirectUri: !!redirectUri });
+      console.error('[Google OAuth] Missing configuration:', {
+        clientId: !!clientId,
+        redirectUri: !!redirectUri,
+      });
       return NextResponse.json({ error: 'Google OAuth is not configured' }, { status: 500 });
     }
 
@@ -33,9 +42,9 @@ export async function GET() {
       {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
