@@ -7,8 +7,18 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-export const prisma = global.prisma || new PrismaClient();
+// DATABASE_URL이 없으면 PrismaClient를 초기화하지 않음 (에러 방지)
+// RDS 생성 후 DATABASE_URL 환경변수 추가 필요
+const createPrismaClient = () => {
+  if (!process.env.DATABASE_URL) {
+    console.warn('DATABASE_URL is not set. Prisma client will not be initialized.');
+    return null;
+  }
+  return new PrismaClient();
+};
 
-if (process.env.NODE_ENV !== 'production') {
+export const prisma = global.prisma || createPrismaClient();
+
+if (process.env.NODE_ENV !== 'production' && prisma) {
   global.prisma = prisma;
 }
