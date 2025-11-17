@@ -16,56 +16,42 @@ type SectionKey = (typeof apmItems)[number]['key'];
 const SECTION_IDS: SectionKey[] = apmItems.map((item) => item.key);
 
 export default function Sidebar() {
-  const [activeSection, setActiveSection] = useState<SectionKey>(() => {
-    if (typeof window === 'undefined') return 'overview';
-    const initialHash = window.location.hash.replace('#', '');
-    return SECTION_IDS.find((id) => id === initialHash) ?? 'overview';
-  });
+  const [activeSection, setActiveSection] = useState<SectionKey>('overview');
 
   const scrollToSection = (sectionId: SectionKey) => {
     const element = document.getElementById(sectionId);
     if (!element) return;
-
     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setActiveSection(sectionId);
   };
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return;
-
     const observer = new IntersectionObserver(
       (entries) => {
-        const inView = entries.filter((entry) => entry.isIntersecting);
-        if (!inView.length) return;
+        const visibleSections = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
 
-        inView.sort((a, b) => {
-          const aTop = (a.target as HTMLElement).offsetTop;
-          const bTop = (b.target as HTMLElement).offsetTop;
-          return aTop - bTop;
-        });
-
-        const topMost = inView.find((entry) => entry.boundingClientRect.top <= 160) ?? inView[0];
-        const nextId = topMost.target.id;
-        const sectionKey = SECTION_IDS.find((id) => id === nextId);
-
-        if (sectionKey && sectionKey !== activeSection) {
-          setActiveSection(sectionKey);
+        if (visibleSections.length > 0) {
+          const id = visibleSections[0].target.id as SectionKey;
+          if (SECTION_IDS.includes(id)) {
+            setActiveSection(id);
+          }
         }
       },
       {
         root: null,
-        rootMargin: '-10% 0px -70% 0px',
-        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
+        threshold: 0.25, // 25% 이상 보이면 active
       },
     );
 
-    SECTION_IDS.forEach((sectionId) => {
-      const el = document.getElementById(sectionId);
+    SECTION_IDS.forEach((id) => {
+      const el = document.getElementById(id);
       if (el) observer.observe(el);
     });
 
     return () => observer.disconnect();
-  }, [activeSection]);
+  }, []);
 
   return (
     <aside className="w-56 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm h-fit sticky top-6">
