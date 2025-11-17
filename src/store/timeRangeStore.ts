@@ -21,8 +21,8 @@ interface TimeRangeState {
   setTimeRange: (timeRange: TimeRange) => void;
 }
 
-// 기본값: 지난 1시간
-const DEFAULT_TIME_RANGE: TimeRange = '1h';
+// 기본값: 지난 15분
+const DEFAULT_TIME_RANGE: TimeRange = '15min';
 const defaultParams = convertTimeRangeToParams(DEFAULT_TIME_RANGE);
 const defaultInterval = getIntervalForTimeRange(DEFAULT_TIME_RANGE);
 

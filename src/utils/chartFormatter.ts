@@ -8,7 +8,7 @@
 /**
  * interval 값에 따라 차트 x축 라벨 포맷팅
  * @param date - Date 객체
- * @param interval - API interval 값 (예: "5m", "10m", "1h", "2d")
+ * @param interval - API interval 값 (예: "1m", "5m", "10m", "1h", "2d")
  * @returns 포맷팅된 라벨 문자열
  */
 export function formatChartTimeLabel(date: Date, interval: string): string {
@@ -17,12 +17,16 @@ export function formatChartTimeLabel(date: Date, interval: string): string {
   const month = date.getMonth() + 1;
   const day = date.getDate();
 
-  // 짧은 간격 (5분~1시간): 시:분만 표시
-  if (['5m', '10m', '30m', '1h'].includes(interval)) {
+  // 매우 짧은 간격 (1분~3분): 시:분 표시
+  if (['1m', '2m', '3m'].includes(interval)) {
     return `${hour}:${minute}`;
   }
-  // 중간 간격 (2시간~12시간): 시간만 표시
-  else if (['2h', '12h'].includes(interval)) {
+  // 짧은 간격 (5분~30분): 시:분 표시
+  else if (['5m', '10m', '30m'].includes(interval)) {
+    return `${hour}:${minute}`;
+  }
+  // 중간 간격 (1시간~12시간): 시간만 표시
+  else if (['1h', '2h', '12h'].includes(interval)) {
     return `${hour}h`;
   }
   // 긴 간격 (1일~2일): 월/일만 표시
@@ -37,7 +41,7 @@ export function formatChartTimeLabel(date: Date, interval: string): string {
 
 /**
  * interval 값에 따라 x축 라벨 표시 간격 계산
- * @param interval - API interval 값 (예: "5m", "10m", "1h", "2d")
+ * @param interval - API interval 값 (예: "1m", "5m", "10m", "1h", "2d")
  * @param dataLength - 데이터 포인트 개수
  * @returns x축 라벨 표시 간격 (0 = 모두 표시, 'auto' = 자동)
  */
@@ -48,6 +52,10 @@ export function getXAxisInterval(interval: string, dataLength: number): number |
 
   // interval에 따른 간격 조절
   switch (interval) {
+    case '1m':
+    case '2m':
+    case '3m':
+      return Math.floor(dataLength / 10); // ~10개 라벨
     case '5m':
     case '10m':
       return Math.floor(dataLength / 8); // ~8개 라벨
@@ -68,11 +76,14 @@ export function getXAxisInterval(interval: string, dataLength: number): number |
 /**
  * interval 값에 따라 bar width를 동적으로 계산
  * 기간이 길수록 bar가 더 얇아짐
- * @param interval - API interval 값 (예: "5m", "10m", "1h", "2d")
+ * @param interval - API interval 값 (예: "1m", "5m", "10m", "1h", "2d")
  * @returns bar width (픽셀 또는 비율)
  */
 export function getBarWidth(interval: string): number | string {
   const barWidthMap: Record<string, number | string> = {
+    '1m': '70%', // 매우 짧은 간격: 매우 굵음
+    '2m': '65%',
+    '3m': '60%',
     '5m': '60%', // 짧은 간격: 굵음
     '10m': '55%',
     '30m': '50%',
@@ -89,11 +100,14 @@ export function getBarWidth(interval: string): number | string {
 /**
  * Resources 컴포넌트용 bar width 계산 (더 큰 폭)
  * 차트 크기가 작으므로 더 굵은 bar를 사용
- * @param interval - API interval 값 (예: "5m", "10m", "1h", "2d")
+ * @param interval - API interval 값 (예: "1m", "5m", "10m", "1h", "2d")
  * @returns bar width (픽셀 또는 비율)
  */
 export function getBarWidthForResources(interval: string): number | string {
   const barWidthMap: Record<string, number | string> = {
+    '1m': '80%', // 매우 짧은 간격: 매우 굵음
+    '2m': '75%',
+    '3m': '70%',
     '5m': '70%', // 짧은 간격: 굵음 (Resources는 차트 크기가 작으므로 더 큼)
     '10m': '65%',
     '30m': '60%',
@@ -110,7 +124,7 @@ export function getBarWidthForResources(interval: string): number | string {
 /**
  * Resources 컴포넌트용 x축 간격 계산
  * 차트 크기가 작으므로 더 큰 간격 사용
- * @param interval - API interval 값 (예: "5m", "10m", "1h", "2d")
+ * @param interval - API interval 값 (예: "1m", "5m", "10m", "1h", "2d")
  * @param dataLength - 데이터 포인트 개수
  * @returns x축 라벨 표시 간격 (0 = 모두 표시, 'auto' = 자동)
  */
@@ -124,6 +138,10 @@ export function getXAxisIntervalForResources(
 
   // interval에 따른 간격 조절 (Resources 차트는 좁으므로 더 큰 간격)
   switch (interval) {
+    case '1m':
+    case '2m':
+    case '3m':
+      return Math.floor(dataLength / 8); // ~8개 라벨
     case '5m':
     case '10m':
       return Math.floor(dataLength / 6); // ~6개 라벨

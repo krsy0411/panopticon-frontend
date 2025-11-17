@@ -8,6 +8,7 @@ import { useParams } from 'next/navigation';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import type { TimeRange as TimeRangeType } from '@/src/utils/timeRange';
 import OverviewSection from '@/components/features/apps/services/[serviceId]/section/Overview';
+import { PRESET_RANGES } from '@/src/constants/timeRanges';
 
 export default function ServiceOverview() {
   const params = useParams();
@@ -19,8 +20,8 @@ export default function ServiceOverview() {
     setTimeRange(range.value as TimeRangeType);
   };
 
-  const selectedTimeRange: TimeRange = {
-    label: timeRange === '1h' ? '1 hour' : timeRange,
+  const selectedTimeRange: TimeRange = PRESET_RANGES.find((range) => range.value === timeRange) || {
+    label: timeRange,
     value: timeRange,
   };
 

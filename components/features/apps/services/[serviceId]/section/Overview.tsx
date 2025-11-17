@@ -51,7 +51,12 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
       p95:
         metricsArray.find((m) => m.metric_name === 'latency_p95_ms')?.points.map((p) => p.value) ||
         [],
-      // 추후 다른 레이턴시 퍼센타일도 추가 가능
+      p90:
+        metricsArray.find((m) => m.metric_name === 'latency_p90_ms')?.points.map((p) => p.value) ||
+        [],
+      p50:
+        metricsArray.find((m) => m.metric_name === 'latency_p50_ms')?.points.map((p) => p.value) ||
+        [],
     },
   };
 
@@ -201,55 +206,68 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
         data: chartData.latency.p95,
         smooth: true,
         symbol: 'none',
-        lineStyle: { width: 2, color: '#facc15' },
+        lineStyle: { width: 2, color: '#ef4444' },
+      },
+      {
+        name: 'p90',
+        type: 'line',
+        data: chartData.latency.p90,
+        smooth: true,
+        symbol: 'none',
+        lineStyle: { width: 2, color: '#f97316' },
+      },
+      {
+        name: 'p50',
+        type: 'line',
+        data: chartData.latency.p50,
+        smooth: true,
+        symbol: 'none',
+        lineStyle: { width: 2, color: '#10b981' },
       },
     ],
   };
 
   return (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-5 rounded-lg border border-gray-200">
-          <StateHandler
-            isLoading={isLoading}
-            isError={isError}
-            isEmpty={isEmpty}
-            type="chart"
-            height={300}
-            loadingMessage="메트릭을 불러오는 중..."
-            emptyMessage="표시할 메트릭 데이터가 없습니다"
-          >
-            <ReactECharts option={requestsOption} style={{ height: 300 }} />
-          </StateHandler>
-        </div>
-        <div className="bg-white p-5 rounded-lg border border-gray-200">
-          <StateHandler
-            isLoading={isLoading}
-            isError={isError}
-            isEmpty={isEmpty}
-            type="chart"
-            height={300}
-            loadingMessage="메트릭을 불러오는 중..."
-            emptyMessage="표시할 에러 데이터가 없습니다"
-          >
-            <ReactECharts option={errorsOption} style={{ height: 300 }} />
-          </StateHandler>
-        </div>
-      </div>
-
-      <div className="bg-white p-5 rounded-lg border border-gray-200">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
         <StateHandler
           isLoading={isLoading}
           isError={isError}
           isEmpty={isEmpty}
           type="chart"
-          height={340}
+          height={250}
+          loadingMessage="메트릭을 불러오는 중..."
+          emptyMessage="표시할 메트릭 데이터가 없습니다"
+        >
+          <ReactECharts option={requestsOption} style={{ height: 250 }} />
+        </StateHandler>
+      </div>
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <StateHandler
+          isLoading={isLoading}
+          isError={isError}
+          isEmpty={isEmpty}
+          type="chart"
+          height={250}
+          loadingMessage="메트릭을 불러오는 중..."
+          emptyMessage="표시할 에러 데이터가 없습니다"
+        >
+          <ReactECharts option={errorsOption} style={{ height: 250 }} />
+        </StateHandler>
+      </div>
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <StateHandler
+          isLoading={isLoading}
+          isError={isError}
+          isEmpty={isEmpty}
+          type="chart"
+          height={250}
           loadingMessage="레이턴시 데이터를 불러오는 중..."
           emptyMessage="표시할 레이턴시 데이터가 없습니다"
         >
-          <ReactECharts option={latencyOption} style={{ height: 340 }} />
+          <ReactECharts option={latencyOption} style={{ height: 250 }} />
         </StateHandler>
       </div>
-    </>
+    </div>
   );
 }

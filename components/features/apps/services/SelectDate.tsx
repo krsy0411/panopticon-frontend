@@ -5,17 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiClock, FiCalendar, FiChevronDown } from 'react-icons/fi';
 import { TimeRange } from '@/types/time';
 import { toast } from 'react-toastify';
-
-const PRESET_RANGES: TimeRange[] = [
-  { label: '지난 1시간', value: '1h', hours: 1 },
-  { label: '지난 3시간', value: '3h', hours: 3 },
-  { label: '지난 6시간', value: '6h', hours: 6 },
-  { label: '지난 12시간', value: '12h', hours: 12 },
-  { label: '지난 하루', value: '1d', hours: 24 },
-  { label: '지난 1주일', value: '1w', hours: 24 * 7 },
-  { label: '지난 2주일', value: '2w', hours: 24 * 14 },
-  { label: '지난 한 달', value: '1M', hours: 24 * 30 },
-];
+import { PRESET_RANGES } from '@/src/constants/timeRanges';
 
 // 날짜 포맷팅 유틸리티
 const formatDate = (date: Date) => {
