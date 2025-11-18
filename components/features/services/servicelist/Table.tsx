@@ -1,10 +1,18 @@
-// 서비스 목록 테이블 (+페이지네이션)
+// 서비스 목록 테이블 (+페이지네이션, 즐겨찾기)
 'use client';
 
+import { useMemo, useState } from 'react';
 import Table from '@/components/ui/Table';
 import Pagination from '@/components/features/services/Pagination';
 import type { ServiceSummary } from '@/types/apm';
 import type { PaginationControls } from '@/types/servicelist';
+import { getEnvironmentStyle } from '../../../../src/types/environmentStyles';
+
+interface ServiceListTableProps {
+  services: ServiceSummary[];
+  pagination?: PaginationControls;
+  onRowClick: (service: ServiceSummary) => void;
+}
 
 const columns = [
   {
@@ -16,9 +24,18 @@ const columns = [
     key: 'environment' as keyof ServiceSummary,
     header: 'Environment',
     width: '15%',
-    render: (value: ServiceSummary[keyof ServiceSummary]) => (
-      <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">{value as string}</span>
-    ),
+    render: (value: ServiceSummary[keyof ServiceSummary]) => {
+      const environment = value as string;
+      const styles = getEnvironmentStyle(environment);
+      return (
+        <span
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${styles.chip}`}
+        >
+          <span className={`h-2 w-2 rounded-full ${styles.dot}`} />
+          {environment}
+        </span>
+      );
+    },
   },
   {
     key: 'request_count' as keyof ServiceSummary,
@@ -46,23 +63,44 @@ const columns = [
   },
 ];
 
-interface ServiceListTableProps {
-  services: ServiceSummary[];
-  pagination?: PaginationControls;
-  onRowClick: (service: ServiceSummary) => void;
-}
-
 export default function ServiceListTable({
   services,
   pagination,
   onRowClick,
 }: ServiceListTableProps) {
+  const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>(() =>
+    services.reduce<Record<string, boolean>>((acc, service) => {
+      acc[service.service_name] = false;
+      return acc;
+    }, {}),
+  );
+
+  const handleFavoriteClick = (row: ServiceSummary) => {
+    setFavoriteMap((prev) => ({
+      ...prev,
+      [row.service_name]: !prev[row.service_name],
+    }));
+  };
+
+  const tableData: ServiceSummary[] = useMemo(
+    () =>
+      services.map(
+        (service) =>
+          ({
+            ...service,
+            isFavorite: favoriteMap[service.service_name] ?? false,
+          } as ServiceSummary),
+      ),
+    [favoriteMap, services],
+  );
+
   return (
     <>
       <Table<ServiceSummary>
         columns={columns}
-        data={services}
+        data={tableData}
         showFavorite
+        onFavoriteClick={handleFavoriteClick}
         onRowClick={onRowClick}
       />
       {pagination && (

@@ -2,7 +2,7 @@ import React from 'react';
 
 interface StarProps {
   className?: string;
-  onClick?: () => void;
+  onClick?: React.MouseEventHandler<SVGSVGElement>;
 }
 
 export default function Star({ className = 'w-4 h-4', onClick }: StarProps) {

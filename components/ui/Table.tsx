@@ -1,10 +1,10 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { FiChevronUp, FiChevronDown } from 'react-icons/fi';
 import Star from '../icons/Star';
 
-interface TableColumn<T> {
+export interface TableColumn<T> {
   key: keyof T;
   header: string;
   render?: (value: T[keyof T], row: T) => React.ReactNode;
@@ -142,13 +142,22 @@ export default function Table<T>({
               >
                 {/* 즐겨찾기 셀 */}
                 {showFavorite && (
-                  <td
-                    className="px-4 py-3 text-sm"
-                    onClick={() => onFavoriteClick?.(row, rowIndex)}
-                  >
-                    <Star className="w-4 h-4 text-gray-400 hover:text-yellow-500 cursor-pointer" />
+                  <td className="px-4 py-3 text-sm">
+                    <Star
+                      onClick={(e) => {
+                        e.stopPropagation(); // ⭐ Row 클릭 막기
+                        onFavoriteClick?.(row, rowIndex); // ⭐ 토글 발생
+                      }}
+                      className={`w-4 h-4 cursor-pointer transition-colors ${
+                        // ⭐ 즐겨찾기 상태별 색상 적용
+                        (row as { isFavorite?: boolean }).isFavorite
+                          ? 'text-yellow-400'
+                          : 'text-gray-400'
+                      }`}
+                    />
                   </td>
                 )}
+
                 {columns.map((column) => (
                   <td
                     key={String(column.key)}

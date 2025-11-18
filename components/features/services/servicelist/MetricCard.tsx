@@ -4,6 +4,7 @@
 
 import { KeyboardEvent } from 'react';
 import type { MetricCardProps, MetricTone } from '@/types/servicelist';
+import { getEnvironmentStyle } from '../../../../src/types/environmentStyles';
 
 // 카드 색상 톤 정의
 const toneStyles: Record<MetricTone, { border: string; primary: string; status: string }> = {
@@ -42,6 +43,8 @@ export default function ServiceMetricCard({
     }
   };
 
+  const environmentStyle = getEnvironmentStyle(environment);
+
   return (
     <article
       role={isInteractive ? 'button' : undefined}
@@ -60,7 +63,10 @@ export default function ServiceMetricCard({
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-gray-500">{serviceName}</p>
-          <span className="inline-flex text-xs px-2 py-0.5 rounded-full border border-gray-200 bg-white text-gray-600 mt-1">
+          <span
+            className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full mt-1 ${environmentStyle.chip}`}
+          >
+            <span className={`h-2 w-2 rounded-full ${environmentStyle.dot}`} />
             {environment}
           </span>
         </div>
