@@ -32,27 +32,35 @@ import { getBucketColor, getBucketLabel, getBucketByIndex } from '@/src/utils/du
 
 export default function WaterfallView({ spans, onSpanSelect }: WaterfallViewProps) {
   const chartOption = useMemo<EChartsOption | null>(() => {
-    if (!spans || spans.length === 0) {
-      return null;
-    }
+    if (!spans || spans.length === 0) return null;
 
-    const maxDuration = Math.max(...spans.map((s) => s.duration_ms ?? 0), 1);
+    /*timestamp를 ms로 변환 */
+    const spanStarts = spans.map((s) => new Date(s.timestamp).getTime());
 
-    const data = spans.map((s) => {
+    /* trace 시작점 계산 */
+    const traceStart = Math.min(...spanStarts);
+
+    /* 각 스팬의 시작 offset 계산 */
+    const offsetData = spans.map((s) => {
+      const start = new Date(s.timestamp).getTime();
+      return start - traceStart; // Waterfall 시작 위치 (ms)
+    });
+
+    /*duration 그대로 사용 */
+    const durationData = spans.map((s) => s.duration_ms ?? 0);
+
+    const maxDuration = Math.max(...durationData, 1);
+
+    /*duration bar도 itemStyle 포함해서 구성 */
+    const durationBar = spans.map((s) => {
       const dur = s.duration_ms ?? 0;
       const ratio = dur / maxDuration;
-      const color = getBucketColor(ratio);
-
       return {
         value: dur,
         name: s.name,
         spanId: s.span_id,
         itemStyle: {
-          color: color,
-          borderWidth: 0,
-          // selectedSpan에 따른 하이라이트 제거: 항상 동일한 스타일 사용
-          shadowBlur: 0,
-          shadowColor: 'rgba(0, 0, 0, 0)',
+          color: getBucketColor(ratio),
         },
       };
     });
@@ -67,6 +75,7 @@ export default function WaterfallView({ spans, onSpanSelect }: WaterfallViewProp
         top: '5%',
         bottom: '5%',
       },
+
       tooltip: {
         trigger: 'item',
         backgroundColor: 'rgba(0, 0, 0, 0.9)',
@@ -77,75 +86,75 @@ export default function WaterfallView({ spans, onSpanSelect }: WaterfallViewProp
         },
         padding: 16,
         formatter: (params: any) => {
-          if (params && params.data) {
-            const spanId = params.data.spanId;
-            const span = spans.find((s) => s.span_id === spanId);
-            if (!span) return '';
-            const ratio = (span.duration_ms ?? 0) / maxDuration;
-            const statusText = getBucketLabel(ratio);
-            return `<div style="line-height: 1.8;">
-              <div style="font-weight: 600; font-size: 16px; margin-bottom: 10px; color: #fff;">${
-                span.name
-              }</div>
-                <div style="color: #e2e8f0; margin-bottom: 8px; font-size: 15px;">Duration: <span style="color: #fff; font-weight: 600;">${(
-                  span.duration_ms ?? 0
-                ).toFixed(2)} ms</span></div>
-                <div style="color: #e2e8f0; margin-bottom: 6px; font-size: 15px;">Status: ${statusText}</div>
-              <div style="color: #94a3b8; font-size: 12px; margin-top: 8px; font-family: monospace;">${
-                span.span_id
-              }</div>
-            </div>`;
-          }
-          return '';
+          const spanId = params.data?.spanId;
+          const span = spans.find((s) => s.span_id === spanId);
+          if (!span) return '';
+
+          const ratio = (span.duration_ms ?? 0) / maxDuration;
+          const statusText = getBucketLabel(ratio);
+
+          return `
+            <div style="line-height: 1.8;">
+              <div style="font-weight: 600; font-size: 16px; margin-bottom: 10px; color: #fff;">
+                ${span.name}
+              </div>
+              <div style="color: #e2e8f0; margin-bottom: 8px; font-size: 15px;">
+                Duration:
+                <span style="color:#fff;font-weight:600;">
+                  ${(span.duration_ms ?? 0).toFixed(2)} ms
+                </span>
+              </div>
+              <div style="color: #e2e8f0; margin-bottom: 6px; font-size: 15px;">
+                Status: ${statusText}
+              </div>
+              <div style="color:#94a3b8;font-size:12px;margin-top:8px;font-family:monospace;">
+                ${span.span_id}
+              </div>
+            </div>
+          `;
         },
       },
+
+      /* x축 라벨 Duration → Timeline 으로 변경 */
       xAxis: {
         type: 'value',
-        name: 'Duration (ms)',
+        name: 'Timeline (ms)',
         nameLocation: 'middle',
         nameGap: 30,
-        nameTextStyle: {
-          fontSize: 13,
-          color: '#6b7280',
-        },
-        axisLabel: {
-          fontSize: 12,
-          color: '#6b7280',
-        },
-        splitLine: {
-          lineStyle: {
-            color: '#e5e7eb',
-            type: 'dashed',
-          },
-        },
+        nameTextStyle: { fontSize: 13, color: '#6b7280' },
+        axisLabel: { fontSize: 12, color: '#6b7280' },
+        splitLine: { lineStyle: { color: '#e5e7eb', type: 'dashed' } },
       },
+
       yAxis: {
         type: 'category',
         data: yAxisData,
-        axisLabel: {
-          fontSize: 12,
-          color: '#374151',
-          fontWeight: 500,
-        },
-        axisLine: {
-          show: true,
-          lineStyle: {
-            color: '#d1d5db',
-          },
-        },
-        axisTick: {
-          show: false,
-        },
+        inverse: true,
+        axisLabel: { fontSize: 12, color: '#374151', fontWeight: 500 },
+        axisLine: { show: true, lineStyle: { color: '#d1d5db' } },
+        axisTick: { show: false },
       },
+
+      /*offset + duration을 stack으로 구성 */
       series: [
         {
+          /** [1] 투명 offset bar (시작 위치) */
           type: 'bar',
-          data: data,
+          stack: 'total',
+          itemStyle: { color: 'rgba(0,0,0,0)' },
+          emphasis: { disabled: true },
+          data: offsetData,
+        },
+        {
+          /** [2] duration bar */
+          type: 'bar',
+          stack: 'total',
           barWidth: '60%',
+          data: durationBar,
           emphasis: {
             itemStyle: {
               shadowBlur: 20,
-              shadowColor: 'rgba(0, 0, 0, 0.3)',
+              shadowColor: 'rgba(0,0,0,0.3)',
             },
           },
         },
