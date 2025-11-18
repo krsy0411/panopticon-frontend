@@ -27,7 +27,7 @@ function PresetDropdown({ selectedRange, onSelectRange, onShowCalendar }: Preset
   return (
     <>
       {/* 프리셋 옵션 */}
-      <div className="py-2">
+      <div className="max-h-60 overflow-y-auto">
         {PRESET_RANGES.map((range) => (
           <button
             key={range.value}

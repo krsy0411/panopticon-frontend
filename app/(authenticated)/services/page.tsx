@@ -109,10 +109,40 @@ export default function ServicesPage() {
     openServiceModal('edit');
   };
 
+  const deriveInstallScenario = (
+    values: CreateServiceFormValues,
+  ): 'frontend-trace' | 'backend-log' | 'backend-trace' | 'backend-log-trace' | null => {
+    if (values.serviceType === 'ui') {
+      return 'frontend-trace';
+    }
+
+    if (values.serviceType === 'api') {
+      if (values.collectLogs && values.collectTraces) return 'backend-log-trace';
+      if (values.collectLogs) return 'backend-log';
+      if (values.collectTraces) return 'backend-trace';
+    }
+
+    return null;
+  };
+
   // 설치 시작 클릭 -> Install Agent 페이지
-  const handleServiceModalSubmit = () => {
+  const handleServiceModalSubmit = (formValues: CreateServiceFormValues) => {
     setIsServiceModalOpen(false);
-    router.push(`/services/settings/install`);
+
+    const scenario = deriveInstallScenario(formValues);
+    if (!scenario) {
+      router.push('/services/install');
+      return;
+    }
+
+    const params = new URLSearchParams({
+      scenario,
+      serviceType: formValues.serviceType,
+      collectLogs: String(formValues.collectLogs),
+      collectTraces: String(formValues.collectTraces),
+    });
+
+    router.push(`/services/install?${params.toString()}`);
   };
 
   return (

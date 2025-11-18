@@ -1,3 +1,5 @@
+// 코드 블록 + 복사 버튼
+
 'use client';
 
 import { useState } from 'react';
@@ -7,6 +9,7 @@ interface CopyableCodeBlockProps {
   code: string;
   className?: string;
   copyLabel?: string;
+  language?: string;
 }
 
 export function CopyableCodeBlock({
@@ -17,9 +20,7 @@ export function CopyableCodeBlock({
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    if (!navigator?.clipboard) {
-      return;
-    }
+    if (!navigator?.clipboard) return;
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
@@ -30,7 +31,8 @@ export function CopyableCodeBlock({
   };
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4">
+    <div className="rounded-lg border border-gray-200 bg-gray-100 p-3 sm:p-4">
+      {/* 복사 버튼 영역 */}
       <div className="flex justify-end">
         <button
           type="button"
@@ -41,8 +43,10 @@ export function CopyableCodeBlock({
           {copied ? '복사완료' : copyLabel}
         </button>
       </div>
-      <div className={`mt-3 overflow-x-auto ${className}`}>
-        <pre className="rounded-lg bg-gray-100 p-4 text-xs text-gray-900 sm:p-6 sm:text-sm">
+
+      {/* 코드 컨테이너 */}
+      <div className={`mt-3 overflow-x-auto bg-gray-100 rounded-lg ${className}`}>
+        <pre className="p-4 sm:p-6 text-xs sm:text-sm text-gray-900 bg-inherit rounded-lg">
           <code>{code}</code>
         </pre>
       </div>
