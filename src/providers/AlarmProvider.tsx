@@ -20,9 +20,9 @@ export function AlarmProvider({ children }: { children: ReactNode }) {
   const [hasNewAlarm, setHasNewAlarm] = useState(false);
   const [recentErrors, setRecentErrors] = useState<LogItem[]>([]);
 
-  // 슬랙 알림을 위한 에러 버퍼 (5개마다 전송)
+  // 슬랙 알림을 위한 에러 버퍼 (10개마다 전송)
   const errorBufferRef = useRef<LogItem[]>([]);
-  const SLACK_NOTIFICATION_THRESHOLD = 5; // 5개마다 슬랙 알림 전송
+  const SLACK_NOTIFICATION_THRESHOLD = 10; // 10개마다 슬랙 알림 전송
 
   // 새 에러 로그가 도착했을 때
   const handleLogReceived = useCallback((log: LogItem) => {
@@ -38,7 +38,7 @@ export function AlarmProvider({ children }: { children: ReactNode }) {
     // 슬랙 알림 로직: 에러 버퍼에 추가
     errorBufferRef.current.push(log);
 
-    // 5개가 쌓이면 슬랙으로 전송
+    // 10개가 쌓이면 슬랙으로 전송
     if (errorBufferRef.current.length >= SLACK_NOTIFICATION_THRESHOLD) {
       const errorsToSend = [...errorBufferRef.current];
       errorBufferRef.current = []; // 버퍼 초기화

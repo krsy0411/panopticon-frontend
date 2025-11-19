@@ -35,13 +35,13 @@ export async function sendSlackErrorNotification(errors: LogItem[]) {
     const serviceName = errors[0]?.service_name || 'Unknown Service';
     const errorCount = errors.length;
 
-    // 에러 메시지들 요약 (최대 5개)
+    // 에러 메시지들 요약 (최대 10개)
     const errorMessages = errors
-      .slice(0, 5)
+      .slice(0, 10)
       .map((error, index) => `${index + 1}. ${error.message}`)
       .join('\n');
 
-    const remainingCount = errorCount > 5 ? errorCount - 5 : 0;
+    const remainingCount = errorCount > 10 ? errorCount - 10 : 0;
     const notification: SlackNotificationPayload = {
       title: `🚨 ${errorCount}개의 에러 발생`,
       message: `**Service**: ${serviceName}\n\n**최근 에러 메시지:**\n${errorMessages}${
