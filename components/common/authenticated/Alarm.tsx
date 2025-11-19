@@ -5,7 +5,7 @@ import { FiBell } from 'react-icons/fi';
 import { useAlarm } from '@/src/providers/AlarmProvider';
 
 export const Alarm = () => {
-  const { unreadCount, hasNewAlarm, recentErrors, clearAlarm, resetUnreadCount } = useAlarm();
+  const { unreadCount, recentErrors, clearAlarm, resetUnreadCount } = useAlarm();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -74,16 +74,8 @@ export const Alarm = () => {
 
         {/* 읽지 않은 알림 배지 */}
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
+          <span className="absolute top-0 right-0 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-xs font-bold rounded-full">
             {unreadCount > 999 ? '999+' : unreadCount}
-          </span>
-        )}
-
-        {/* 새 알림 도착 시 펄스 애니메이션 */}
-        {hasNewAlarm && (
-          <span className="absolute top-1 right-1 flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
           </span>
         )}
       </button>
