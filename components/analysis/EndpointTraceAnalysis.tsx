@@ -85,7 +85,11 @@ export default function EndpointTraceAnalysis({
   const { startTime, endTime } = useTimeRangeStore();
 
   // 트레이스 데이터 가져오기
-  const { data, isLoading, isError } = useQuery({
+  const {
+    data: rawData,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['endpointTraces', serviceName, endpointName, status, startTime, endTime],
     queryFn: () =>
       getEndpointTraces(serviceName, endpointName, {
@@ -96,6 +100,9 @@ export default function EndpointTraceAnalysis({
       }),
     enabled: isOpen && !!serviceName && !!endpointName,
   });
+
+  // durationMs 기준 내림차순 정렬 (큰 값이 앞에 오도록)
+  const data = rawData ? [...rawData].sort((a, b) => b.durationMs - a.durationMs) : rawData;
 
   // ESC 키로 닫기
   useEffect(() => {

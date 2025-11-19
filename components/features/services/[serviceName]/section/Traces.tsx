@@ -7,8 +7,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getServiceTraces } from '@/src/api/apm';
 import { TraceSummary } from '@/types/apm';
 import { useTimeRangeStore, POLLING_INTERVAL } from '@/src/store/timeRangeStore';
-import { formatChartTimeLabel, getXAxisInterval } from '@/src/utils/chartFormatter';
-import { convertTimeRangeToParams } from '@/src/utils/timeRange';
+import { getTimeAxisFormatter } from '@/src/utils/chartFormatter';
+import { convertTimeRangeToParams, getChartXAxisRange } from '@/src/utils/timeRange';
 import StateHandler from '@/components/ui/StateHandler';
 import TraceAnalysis from '@/components/analysis/TraceAnalysis';
 
@@ -18,7 +18,7 @@ interface TracesSectionProps {
   serviceName: string;
 }
 
-// 차트용 데이터 포인트 타입
+// 테이블용 데이터 포인트 타입
 interface TracePoint {
   timestamp: string;
   duration: number;
@@ -39,17 +39,17 @@ const TRACE_TABLE_COLUMNS: Array<{
 }> = [
   {
     key: 'timestamp',
-    header: 'DATE',
+    header: '날짜',
     width: '15%',
   },
   {
     key: 'resource',
-    header: 'RESOURCE',
+    header: '리소스',
     width: '25%',
   },
   {
     key: 'service',
-    header: 'SERVICE',
+    header: '서비스',
     width: '15%',
     render: (value: TracePoint[keyof TracePoint]) => (
       <div className="flex items-center">
@@ -59,7 +59,7 @@ const TRACE_TABLE_COLUMNS: Array<{
   },
   {
     key: 'duration',
-    header: 'DURATION',
+    header: '레이턴시 (ms)',
     width: '15%',
     render: (value: TracePoint[keyof TracePoint]) => {
       const ms = Number(value);
@@ -71,7 +71,7 @@ const TRACE_TABLE_COLUMNS: Array<{
   },
   {
     key: 'status',
-    header: 'STATUS',
+    header: '상태',
     width: '10%',
     render: (value: TracePoint[keyof TracePoint]) => {
       const status = String(value);
@@ -89,7 +89,7 @@ const TRACE_TABLE_COLUMNS: Array<{
   },
   {
     key: 'latencyBreakdown',
-    header: 'LATENCY BREAKDOWN',
+    header: '레이턴시 분해',
     width: '30%',
     sortable: false,
     render: (value: TracePoint[keyof TracePoint]) => {
@@ -106,7 +106,7 @@ const TRACE_TABLE_COLUMNS: Array<{
   },
 ];
 
-// TraceSummary를 TracePoint로 변환
+// TraceSummary를 TracePoint로 변환 (테이블 표시용)
 function transformTraceToPoint(trace: TraceSummary): TracePoint {
   const date = new Date(trace.start_time);
   const timestamp = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(
@@ -155,21 +155,20 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
   // 전체 트레이스 데이터 변환 (최신순 정렬)
   const allTraces = useMemo(() => {
     if (!data?.traces) return [];
-    const sortedTraces = [...data.traces].sort(
+    return [...data.traces].sort(
       (a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime(),
     );
-    return sortedTraces.map(transformTraceToPoint);
   }, [data]);
 
   const totalCount = allTraces.length;
   const isEmpty = allTraces.length === 0;
 
-  // 현재 페이지의 데이터만 추출 (테이블용)
+  // 현재 페이지의 데이터만 추출 (테이블용, TracePoint로 변환)
   const traces = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return allTraces.slice(startIndex, endIndex);
-  }, [allTraces, currentPage, itemsPerPage]);
+    return allTraces.slice(startIndex, endIndex).map(transformTraceToPoint);
+  }, [allTraces, currentPage]);
 
   // 상태별 색상 매핑
   const getColorByStatus = (status: string) => {
@@ -183,43 +182,20 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
     }
   };
 
-  // 상태별로 데이터 분리 (그래프는 모든 트레이스 사용, x축은 interval에 맞게 포맷팅)
+  // X축 범위 계산 (현재 시각 기준)
+  const { min: xAxisMin, max: xAxisMax } = useMemo(
+    () => getChartXAxisRange(timeRange),
+    [timeRange],
+  );
+
+  // 상태별로 데이터 분리 (그래프는 모든 트레이스 사용)
   const successTraces = allTraces
-    .filter((t: TracePoint) => t.status === 'success')
-    .map((t: TracePoint) => {
-      // trace의 timestamp에서 Date 객체 생성 후 포맷팅
-      const dateStr = t.timestamp.split(' ')[0]; // "12/31"
-      const timeStr = t.timestamp.split(' ')[1]; // "00:00:00"
-      const [month, day] = dateStr.split('/');
-      const [hour, minute] = timeStr.split(':');
-      const traceDate = new Date(
-        2024,
-        parseInt(month) - 1,
-        parseInt(day),
-        parseInt(hour),
-        parseInt(minute),
-      );
-      const formattedLabel = formatChartTimeLabel(traceDate, interval);
-      return [formattedLabel, t.duration];
-    });
+    .filter((t) => t.status !== 'ERROR')
+    .map((t) => [new Date(t.start_time).getTime(), t.duration_ms]);
+
   const errorTraces = allTraces
-    .filter((t: TracePoint) => t.status === 'error')
-    .map((t: TracePoint) => {
-      // trace의 timestamp에서 Date 객체 생성 후 포맷팅
-      const dateStr = t.timestamp.split(' ')[0]; // "12/31"
-      const timeStr = t.timestamp.split(' ')[1]; // "00:00:00"
-      const [month, day] = dateStr.split('/');
-      const [hour, minute] = timeStr.split(':');
-      const traceDate = new Date(
-        2024,
-        parseInt(month) - 1,
-        parseInt(day),
-        parseInt(hour),
-        parseInt(minute),
-      );
-      const formattedLabel = formatChartTimeLabel(traceDate, interval);
-      return [formattedLabel, t.duration];
-    });
+    .filter((t) => t.status === 'ERROR')
+    .map((t) => [new Date(t.start_time).getTime(), t.duration_ms]);
 
   const option = {
     backgroundColor: 'transparent',
@@ -230,17 +206,19 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
       bottom: 60,
     },
     xAxis: {
-      type: 'category',
+      type: 'time',
+      min: xAxisMin,
+      max: xAxisMax,
       axisLabel: {
         color: '#6b7280',
         fontSize: 11,
-        rotate: 45,
-        interval: getXAxisInterval(interval, allTraces.length),
+        formatter: getTimeAxisFormatter(interval),
         hideOverlap: true,
       },
       axisLine: { show: true, lineStyle: { color: '#9ca3af', width: 1 } },
       axisTick: { show: false },
       splitLine: { show: false },
+      splitNumber: 20,
     },
     yAxis: {
       type: 'value',
@@ -258,21 +236,32 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
       borderColor: 'transparent',
       textStyle: { color: '#f9fafb', fontSize: 12 },
       padding: 8,
-      formatter: (params: { value: [string, number]; seriesName: string; dataIndex: number }) => {
-        const [time, duration] = params.value;
+      formatter: (params: { value: [number, number]; seriesName: string; dataIndex: number }) => {
+        const [timestamp, duration] = params.value;
         const status = params.seriesName;
-        const trace = allTraces.filter((t: TracePoint) => t.status === status.toLowerCase())[
-          params.dataIndex
-        ];
+        const isError = status === 'Error';
+        const trace = allTraces.filter((t) =>
+          isError ? t.status === 'ERROR' : t.status !== 'ERROR',
+        )[params.dataIndex];
 
         if (!trace) return '';
 
+        const date = new Date(timestamp);
+        const formattedTime = date.toLocaleString('ko-KR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+
         return `
           <div style="font-weight:700;margin-bottom:6px;font-size:14px;">${status}</div>
-          <div style="margin:2px 0;">Trace ID: ${trace.traceId}</div>
-          <div style="margin:2px 0;">Service: ${trace.service}</div>
-          <div style="margin:2px 0;">Resource: ${trace.resource}</div>
-          <div style="margin:2px 0;">Time: ${time}</div>
+          <div style="margin:2px 0;">Trace ID: ${trace.trace_id}</div>
+          <div style="margin:2px 0;">Service: ${trace.service_name}</div>
+          <div style="margin:2px 0;">Resource: ${trace.root_span_name}</div>
+          <div style="margin:2px 0;">Time: ${formattedTime}</div>
           <div style="margin:2px 0;">Duration: ${duration.toFixed(2)} ms</div>
           <div style="margin-top:8px;color:#3b82f6;font-size:11px;">Click to view details</div>
         `;
@@ -381,12 +370,12 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
             notMerge={true}
             onEvents={{
               click: (params: { seriesName: string; dataIndex: number }) => {
-                const status = params.seriesName.toLowerCase();
-                const trace = allTraces.filter((t: TracePoint) => t.status === status)[
-                  params.dataIndex
-                ];
+                const isError = params.seriesName === 'Error';
+                const trace = allTraces.filter((t) =>
+                  isError ? t.status === 'ERROR' : t.status !== 'ERROR',
+                )[params.dataIndex];
                 if (trace) {
-                  handleTraceClick(trace.traceId);
+                  handleTraceClick(trace.trace_id);
                 }
               },
             }}

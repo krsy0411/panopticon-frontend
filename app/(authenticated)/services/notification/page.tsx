@@ -105,7 +105,13 @@ export default function NotificationPage() {
 
   // Slack 설정 저장
   const handleSlackSave = (config: SlackConfig) => {
+    // 기존 notification_slack 스토리지 저장
     localStorage.setItem('notification_slack', JSON.stringify(config));
+
+    // 슬랙 알림 시스템용 웹훅 URL 저장
+    localStorage.setItem('panopticon_slack_webhook_url', config.webhookUrl);
+    localStorage.setItem('panopticon_slack_enabled', 'true');
+
     setConnections((prev) => ({ ...prev, slack: true }));
     setActiveModal(null);
     toast.success('Slack 연동이 완료되었습니다!');

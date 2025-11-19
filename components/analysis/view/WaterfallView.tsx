@@ -149,7 +149,7 @@ export default function WaterfallView({ spans, onSpanSelect }: WaterfallViewProp
           /** [2] duration bar */
           type: 'bar',
           stack: 'total',
-          barWidth: '60%',
+          barWidth: 35,
           data: durationBar,
           emphasis: {
             itemStyle: {

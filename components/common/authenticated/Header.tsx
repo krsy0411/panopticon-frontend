@@ -1,8 +1,9 @@
 'use client';
 
-import { FiBell, FiSettings, FiLayers } from 'react-icons/fi';
+import { FiSettings, FiLayers } from 'react-icons/fi';
 import { HeaderDropdown } from './HeaderDropdown';
 import { UserProfile } from './UserProfile';
+import { Alarm } from './Alarm';
 import Logo from '@/components/icons/Logo';
 
 export const AuthenticatedHeader = () => {
@@ -49,7 +50,7 @@ export const AuthenticatedHeader = () => {
             <HeaderDropdown
               triggerIcon={<FiSettings className="w-6 h-6 text-zinc-700" />}
               triggerLabel="Setting menu"
-              triggerHref="/services"
+              triggerHref="/services/notification"
               title="Setting"
               items={settingItems}
             />
@@ -60,9 +61,7 @@ export const AuthenticatedHeader = () => {
 
           {/* 알림, 마이페이지 */}
           <div className="flex items-center gap-5">
-            <button className="hover:text-blue-600 transition">
-              <FiBell className="w-7 h-7 text-zinc-700" />
-            </button>
+            <Alarm />
             <UserProfile />
           </div>
         </div>

@@ -42,11 +42,36 @@ interface EndpointTableData {
   request_count: number;
   latency_p95_ms: number;
   error_rate: number;
-  errors: number;
 }
 
-// 테이블 컬럼 정의
-const ENDPOINT_TABLE_COLUMNS: Array<{
+// 시각적 바를 포함한 렌더링 헬퍼 함수
+const renderWithBar = (value: number, maxValue: number, formattedValue: string, color: string) => {
+  const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 relative h-6 bg-gray-100 rounded overflow-hidden">
+        <div
+          className="absolute inset-y-0 left-0 transition-all duration-300"
+          style={{
+            width: `${percentage}%`,
+            backgroundColor: color,
+            opacity: 0.2,
+          }}
+        />
+        <span className="absolute inset-0 flex items-center px-2 text-xs font-medium text-gray-700">
+          {formattedValue}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// 테이블 컬럼 정의 (함수로 변경하여 maxValues를 받음)
+const getEndpointTableColumns = (
+  maxRequestCount: number,
+  maxLatency: number,
+  maxErrorRate: number,
+): Array<{
   key: keyof EndpointTableData;
   header: string;
   width?: string;
@@ -54,7 +79,7 @@ const ENDPOINT_TABLE_COLUMNS: Array<{
     value: EndpointTableData[keyof EndpointTableData],
     row: EndpointTableData,
   ) => React.ReactNode;
-}> = [
+}> => [
   {
     key: 'endpoint_name',
     header: '엔드포인트',
@@ -63,38 +88,30 @@ const ENDPOINT_TABLE_COLUMNS: Array<{
   {
     key: 'request_count',
     header: '요청수',
-    width: '15%',
+    width: '20%',
     render: (value: EndpointTableData[keyof EndpointTableData]) => {
-      return Number(value).toLocaleString();
+      const count = Number(value);
+      return renderWithBar(count, maxRequestCount, count.toLocaleString(), '#3b82f6');
     },
   },
   {
     key: 'latency_p95_ms',
     header: 'P95 레이턴시',
-    width: '15%',
+    width: '20%',
     render: (value: EndpointTableData[keyof EndpointTableData]) => {
       const ms = Number(value);
-      if (ms >= 1000) {
-        return `${(ms / 1000).toFixed(2)}s`;
-      }
-      return `${ms.toFixed(2)}ms`;
+      const formattedValue = ms >= 1000 ? `${(ms / 1000).toFixed(2)}s` : `${ms.toFixed(2)}ms`;
+      return renderWithBar(ms, maxLatency, formattedValue, '#f59e0b');
     },
   },
   {
     key: 'error_rate',
     header: '에러율',
-    width: '15%',
+    width: '20%',
     render: (value: EndpointTableData[keyof EndpointTableData]) => {
       const rate = Number(value) * 100;
-      return `${rate.toFixed(2)}%`;
-    },
-  },
-  {
-    key: 'errors',
-    header: '에러수',
-    width: '15%',
-    render: (value: EndpointTableData[keyof EndpointTableData]) => {
-      return Number(value).toLocaleString();
+      const formattedValue = `${rate.toFixed(2)}%`;
+      return renderWithBar(rate, maxErrorRate * 100, formattedValue, '#ef4444');
     },
   },
 ];
@@ -160,7 +177,6 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
       request_count: endpoint.request_count,
       latency_p95_ms: endpoint.latency_p95_ms,
       error_rate: endpoint.error_rate,
-      errors: Math.round(endpoint.request_count * endpoint.error_rate),
     }));
   }, [data]);
 
@@ -178,13 +194,36 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
     return allEndpoints.slice(startIndex, endIndex);
   }, [allEndpoints, currentPage]);
 
+  // 시각적 바를 위한 최댓값 계산
+  const maxValues = useMemo(() => {
+    if (allEndpoints.length === 0) {
+      return { maxRequestCount: 1, maxLatency: 1, maxErrorRate: 1 };
+    }
+    return {
+      maxRequestCount: Math.max(...allEndpoints.map((e) => e.request_count)),
+      maxLatency: Math.max(...allEndpoints.map((e) => e.latency_p95_ms)),
+      maxErrorRate: Math.max(...allEndpoints.map((e) => e.error_rate)),
+    };
+  }, [allEndpoints]);
+
+  // 테이블 컬럼 생성 (최댓값 기반)
+  const tableColumns = useMemo(
+    () =>
+      getEndpointTableColumns(
+        maxValues.maxRequestCount,
+        maxValues.maxLatency,
+        maxValues.maxErrorRate,
+      ),
+    [maxValues],
+  );
+
   // 차트 옵션
   const chartOption = useMemo(() => {
-    // 파이차트 (요청수, 에러수)
+    // 파이차트 (요청수, 에러율)
     if (selectedMetric === 'requests' || selectedMetric === 'error_rate') {
       const pieData = topEndpoints.map((endpoint, idx) => ({
         name: endpoint.endpoint_name,
-        value: selectedMetric === 'requests' ? endpoint.request_count : endpoint.errors,
+        value: selectedMetric === 'requests' ? endpoint.request_count : endpoint.error_rate * 100,
         itemStyle: {
           color: CHART_COLORS[idx],
         },
@@ -211,15 +250,15 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
               <div style="font-weight:700;margin-bottom:6px;font-size:14px;">${params.name}</div>
               <div style="margin:4px 0;font-size:12px;">
                 ${
-                  selectedMetric === 'requests' ? 'Requests' : 'Errors'
-                }: ${params.value.toLocaleString()} (${params.percent}%)
+                  selectedMetric === 'requests'
+                    ? `Requests: ${params.value.toLocaleString()}`
+                    : `Error Rate: ${params.value.toFixed(2)}%`
+                } (${params.percent}%)
               </div>
               <div style="margin:4px 0;font-size:12px;">p95 Latency: ${endpoint.latency_p95_ms.toFixed(
                 2,
               )}ms</div>
-              <div style="margin:4px 0;font-size:12px;">Error Rate: ${(
-                endpoint.error_rate * 100
-              ).toFixed(2)}%</div>
+              <div style="margin:4px 0;font-size:12px;">Requests: ${endpoint.request_count.toLocaleString()}</div>
             `;
           },
         },
@@ -407,7 +446,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
           {/* 테이블 영역 */}
           <div className="mt-6">
             <Table<EndpointTableData>
-              columns={ENDPOINT_TABLE_COLUMNS}
+              columns={tableColumns}
               data={paginatedEndpoints}
               className="w-full"
               onRowClick={(row) => handleEndpointClick(row.endpoint_name)}

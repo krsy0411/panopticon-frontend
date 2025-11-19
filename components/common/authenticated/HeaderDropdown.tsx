@@ -45,7 +45,7 @@ export const HeaderDropdown = ({
         aria-haspopup="menu"
         aria-label={triggerLabel}
         aria-expanded={isOpen}
-        className="block p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+        className="block p-2 rounded-md hover:bg-gray-100 cursor-pointer"
         onClick={handleTriggerClick}
       >
         {triggerIcon}
@@ -53,26 +53,26 @@ export const HeaderDropdown = ({
 
       {/* Dropdown */}
       <div
-        className={`absolute right-0 top-full w-56 bg-white border rounded shadow-lg transition-all duration-150 ${
+        className={`absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg transition-all duration-150 ${
           isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-1'
         }`}
       >
         {/* 제목 */}
-        <div className="flex justify-start items-center px-4 pt-3 pb-2">
-          <h3 className="font-semibold text-zinc-900 text-xl">{title}</h3>
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
         </div>
 
         {/* 메뉴 항목 */}
-        <div className="pt-0 pb-2 px-2">
+        <div className="py-2">
           {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="block p-2 rounded hover:bg-gray-100 focus:outline-none cursor-pointer"
+              className="block px-4 py-2 hover:bg-gray-50 focus:outline-none cursor-pointer transition"
               aria-label={item.ariaLabel}
               onClick={handleItemClick}
             >
-              <span className="text-sm text-zinc-800">{item.label}</span>
+              <span className="text-sm text-gray-900">{item.label}</span>
             </Link>
           ))}
         </div>

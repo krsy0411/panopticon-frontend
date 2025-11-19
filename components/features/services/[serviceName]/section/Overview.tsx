@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { getServiceMetrics } from '@/src/api/apm';
 import StateHandler from '@/components/ui/StateHandler';
 import { POLLING_INTERVAL, useTimeRangeStore } from '@/src/store/timeRangeStore';
-import { convertTimeRangeToParams, TIME_RANGE_DURATION_MS } from '@/src/utils/timeRange';
+import { convertTimeRangeToParams, getChartXAxisRange } from '@/src/utils/timeRange';
 import { getTimeAxisFormatter, getBarMaxWidthForTimeAxis } from '@/src/utils/chartFormatter';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
@@ -44,15 +44,10 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
 
   // X축 고정 범위 계산 및 차트 데이터 변환
   const { xAxisMin, xAxisMax, chartData } = useMemo(() => {
-    // 데이터에서 가장 최근 timestamp를 기준으로 현재 시각 추정
-    const latestTimestamp =
-      metricsArray[0]?.points.length > 0
-        ? Math.max(...metricsArray[0].points.map((p) => new Date(p.timestamp).getTime()))
-        : new Date().getTime();
-
-    const timeRangeDuration = TIME_RANGE_DURATION_MS[timeRange];
-    const xAxisMax = latestTimestamp;
-    const xAxisMin = latestTimestamp - timeRangeDuration;
+    // 항상 현재 시각을 기준으로 X축 범위 설정
+    const { min, max } = getChartXAxisRange(timeRange);
+    const xAxisMin = min;
+    const xAxisMax = max;
 
     // 시간 기반 X축을 위한 timestamp-value 페어
     const chartData = {
@@ -60,7 +55,7 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
         metricsArray
           .find((m) => m.metric_name === 'http_requests_total')
           ?.points.map((p) => [new Date(p.timestamp).getTime(), p.value]) || [],
-      errors:
+      errorRate:
         metricsArray
           .find((m) => m.metric_name === 'error_rate')
           ?.points.map((p) => [new Date(p.timestamp).getTime(), p.value * 100]) || [],
@@ -124,17 +119,17 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
     },
   };
 
-  /* -------------------- Requests -------------------- */
+  /* -------------------- 요청수 -------------------- */
   const requestsOption = {
     ...baseStyle,
     title: {
-      text: 'Requests',
+      text: '요청수',
       left: 'center',
       textStyle: { fontSize: 14, color: '#374151', fontWeight: 600 },
     },
     series: [
       {
-        name: 'Requests',
+        name: '요청수',
         type: 'bar',
         data: chartData.requests,
         barMaxWidth: getBarMaxWidthForTimeAxis(interval),
@@ -147,19 +142,71 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
     ],
   };
 
-  /* -------------------- Errors -------------------- */
-  const errorsOption = {
+  /* -------------------- 에러율 -------------------- */
+  const errorRateOption = {
     ...baseStyle,
     title: {
-      text: 'Errors',
+      text: '에러율',
       left: 'center',
       textStyle: { fontSize: 14, color: '#374151', fontWeight: 600 },
     },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      borderColor: 'transparent',
+      textStyle: { color: '#f9fafb', fontSize: 12 },
+      padding: 6,
+      formatter: (params: unknown) => {
+        interface TooltipParam {
+          axisValue: string | number;
+          color: string;
+          seriesName: string;
+          value: number[];
+        }
+        const list = params as TooltipParam[];
+        if (!list?.length) return '';
+
+        const timestamp =
+          typeof list[0].axisValue === 'number'
+            ? list[0].axisValue
+            : new Date(list[0].axisValue).getTime();
+        const date = new Date(timestamp);
+        const formattedDate = date.toLocaleString('ko-KR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+
+        const header = `<div style="margin-bottom:4px;"><b>${formattedDate}</b></div>`;
+        const lines = list
+          .map(
+            (p) =>
+              `<div style="margin:2px 0;"><span style="color:${p.color}">●</span> ${
+                p.seriesName
+              }: ${p.value[1].toFixed(2)}%</div>`,
+          )
+          .join('');
+        return header + lines;
+      },
+    },
+    yAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisLabel: {
+        color: '#6b7280',
+        fontSize: 11,
+        formatter: (value: number) => `${value}%`,
+      },
+      splitLine: { lineStyle: { color: '#e5e7eb' } },
+    },
     series: [
       {
-        name: 'Errors',
+        name: '에러율',
         type: 'bar',
-        data: chartData.errors,
+        data: chartData.errorRate,
         barMaxWidth: getBarMaxWidthForTimeAxis(interval),
         itemStyle: {
           color: '#ef4444',
@@ -170,7 +217,7 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
     ],
   };
 
-  /* -------------------- Latency -------------------- */
+  /* -------------------- 레이턴시 -------------------- */
   // 레이턴시 차트 색상 정의 (라벨과 선 동기화)
   const latencyColors = {
     p95: '#dc2626', // 빨강 (더 진한 빨강)
@@ -181,7 +228,7 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
   const latencyOption = {
     ...baseStyle,
     title: {
-      text: 'Latency',
+      text: '레이턴시',
       left: 'center',
       textStyle: { fontSize: 14, color: '#374151', fontWeight: 600 },
     },
@@ -294,9 +341,9 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
             type="chart"
             height={250}
             loadingMessage="메트릭을 불러오는 중..."
-            emptyMessage="표시할 에러 데이터가 없습니다"
+            emptyMessage="표시할 에러율 데이터가 없습니다"
           >
-            <ReactECharts option={errorsOption} style={{ height: 250 }} notMerge={true} />
+            <ReactECharts option={errorRateOption} style={{ height: 250 }} notMerge={true} />
           </StateHandler>
         </div>
         <div className="bg-white p-4 rounded-lg border border-gray-200">

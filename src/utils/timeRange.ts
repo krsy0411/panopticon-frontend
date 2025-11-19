@@ -75,3 +75,20 @@ export function getIntervalForTimeRange(timeRange: TimeRange): string {
 
   return intervalMap[timeRange];
 }
+
+/**
+ * 차트 X축 범위를 현재 시각 기준으로 계산
+ * 항상 현재 시각을 최댓값으로 하고, timeRange만큼 이전을 최솟값으로 설정
+ *
+ * @param timeRange - 상대 시간 값 (예: "15min", "1h", "1d")
+ * @returns X축 범위 { min: 밀리초, max: 밀리초 }
+ */
+export function getChartXAxisRange(timeRange: TimeRange): { min: number; max: number } {
+  const now = new Date().getTime();
+  const duration = TIME_RANGE_DURATION_MS[timeRange];
+
+  return {
+    min: now - duration,
+    max: now,
+  };
+}
