@@ -47,7 +47,7 @@ export function useAuth() {
     onSuccess: () => {
       queryClient.setQueryData(['auth', 'me'], { authenticated: false });
       queryClient.invalidateQueries({ queryKey: ['auth'] });
-      window.location.href = '/auth';
+      window.location.href = '/';
     },
   });
 
