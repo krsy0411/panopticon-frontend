@@ -19,7 +19,7 @@ interface Props {
   widthClass?: string;
 }
 
-export default function LogGroupPanel({ isOpen, group, onClose, widthClass = 'w-[60vw]' }: Props) {
+export default function LogGroupPanel({ isOpen, group, onClose, widthClass = 'w-[65%]' }: Props) {
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
   const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
 

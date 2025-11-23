@@ -271,15 +271,13 @@ export default function FlameGraphView({ spans, onSpanSelect }: FlameGraphViewPr
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-500">전체 span 개수: {spans.length}</p>
-        <div className="flex items-center gap-4">
+    <div className="h-full flex flex-col">
+      <div className="flex items-center justify-end mb-4 px-1">
+        <div className="flex items-center gap-3 text-xs text-gray-600">
           {Array.from({ length: 5 }).map((_, i) => {
             const b = getBucketByIndex(i);
             return (
-              <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
+              <div key={i} className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded-full" style={{ background: b.color }}></div>
                 <span>{b.label}</span>
               </div>
@@ -288,7 +286,6 @@ export default function FlameGraphView({ spans, onSpanSelect }: FlameGraphViewPr
         </div>
       </div>
 
-      {/* Chart */}
       <div className="flex-1 bg-linear-to-br from-slate-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm overflow-hidden p-4">
         <ReactECharts
           option={option}

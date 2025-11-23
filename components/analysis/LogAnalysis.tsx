@@ -15,7 +15,7 @@ export default function LogAnalysis({ log, isOpen, onClose }: LogAnalysisProps) 
 
   return (
     <>
-      <SlideOverLayout isOpen={isOpen} onClose={onClose} widthClass="w-full md:w-[600px]">
+      <SlideOverLayout isOpen={isOpen} onClose={onClose} widthClass="w-[60%]">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 p-4 md:p-6">
           <h2 className="text-xl font-semibold text-gray-900">로그 상세</h2>

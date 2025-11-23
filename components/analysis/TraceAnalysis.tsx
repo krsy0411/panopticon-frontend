@@ -61,7 +61,7 @@ export default function TraceAnalysis({ isOpen, onClose, traceId }: TraceAnalysi
 
   if (!isOpen) return null;
 
-  const widthClass = 'w-[60%]';
+  const widthClass = 'w-[65%]';
   const backdropClassName =
     'fixed inset-0 bg-black/10 backdrop-blur-[2px] z-70 transition-opacity duration-300 opacity-100';
   const panelClassName =

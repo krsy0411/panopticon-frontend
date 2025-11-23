@@ -104,7 +104,20 @@ export default function EndpointPieChart({
           radius: ['40%', '70%'],
           center: ['50%', '50%'],
           data: pieData,
-          label: { show: true, formatter: '{d}%' },
+          label: {
+            show: true,
+            formatter: (params: any) => {
+              const ep = params.data?.endpointData || params.data || {};
+              if (selectedMetric === 'requests') {
+                return `${(ep.request_count ?? 0).toLocaleString()}`;
+              } else if (selectedMetric === 'error_rate') {
+                return `${((ep.error_rate ?? 0) * 100).toFixed(2)}%`;
+              } else if (selectedMetric === 'latency') {
+                return `${(ep.latency_p95_ms ?? 0).toFixed(2)}ms`;
+              }
+              return '{d}%';
+            },
+          },
 
           emphasis: {
             itemStyle: {
