@@ -1,137 +1,176 @@
-'use client';
+// 알림 채널(Discord / Slack / Teams / Email)
 
-import { useState, useEffect } from 'react';
+'use client';
 import { FaDiscord, FaSlack } from 'react-icons/fa';
 import { BsMicrosoftTeams } from 'react-icons/bs';
 import { MdEmail } from 'react-icons/md';
+import type { IntegrationType } from '@/src/types/notification';
 
-export type IntegrationType = 'discord' | 'slack' | 'teams' | 'email';
-
-export interface NotificationIntegrationCardProps {
-  type: IntegrationType;
-  isConnected?: boolean;
-  onConnect?: () => void;
-  onDisconnect?: () => void;
-  onConfigure?: () => void;
-}
-
+/* -------------------------------------------------------
+   채널별 UI 스타일 config
+-------------------------------------------------------- */
 const integrationConfig = {
   discord: {
     name: 'Discord',
-    description: '디스코드 웹훅으로 실시간 알림을 받아보세요',
+    description: '디스코드 웹훅으로 알림을 받아보세요',
     icon: <FaDiscord className="w-6 h-6" />,
-    color: 'from-indigo-500 to-purple-600',
     bgColor: 'bg-indigo-50',
     borderColor: 'border-indigo-200',
     hoverBorderColor: 'hover:border-indigo-400',
-    buttonColor: 'bg-indigo-600 hover:bg-indigo-700',
     iconColor: 'text-indigo-600',
   },
   slack: {
     name: 'Slack',
     description: '슬랙 채널에서 팀과 함께 알림을 공유하세요',
     icon: <FaSlack className="w-6 h-6" />,
-    color: 'from-pink-500 to-red-600',
     bgColor: 'bg-pink-50',
     borderColor: 'border-pink-200',
     hoverBorderColor: 'hover:border-pink-400',
-    buttonColor: 'bg-pink-600 hover:bg-pink-700',
     iconColor: 'text-pink-600',
   },
   teams: {
     name: 'Microsoft Teams',
-    description: 'Teams 채널로 팀 전체에 알림을 공유하세요',
+    description: 'Teams 채널에서 조직과 알림을 공유하세요',
     icon: <BsMicrosoftTeams className="w-6 h-6" />,
-    color: 'from-purple-500 to-blue-600',
     bgColor: 'bg-purple-50',
     borderColor: 'border-purple-200',
     hoverBorderColor: 'hover:border-purple-400',
-    buttonColor: 'bg-purple-600 hover:bg-purple-700',
     iconColor: 'text-purple-600',
   },
-  // (jira/trello removed)
   email: {
     name: 'Email',
-    description: '이메일로 알림을 받아보세요 (SMTP)',
+    description: '이메일로 알림을 받아보세요(SMTP)',
     icon: <MdEmail className="w-6 h-6" />,
-    color: 'from-green-500 to-teal-600',
     bgColor: 'bg-green-50',
     borderColor: 'border-green-200',
     hoverBorderColor: 'hover:border-green-400',
-    buttonColor: 'bg-green-600 hover:bg-green-700',
     iconColor: 'text-green-600',
   },
 };
 
+const initialNow = Date.now();
+
+const formatRelative = (value?: Date) => {
+  if (!value) return '';
+  const diff = initialNow - value.getTime();
+  const minutes = Math.max(1, Math.round(diff / 60000));
+
+  if (minutes < 60) return `${minutes}분 전`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}시간 전`;
+
+  return `${Math.round(hours / 24)}일 전`;
+};
+
+export interface NotificationIntegrationCardProps {
+  type: IntegrationType;
+  isConnected?: boolean;
+  connectedSloCount?: number;
+  lastTestResult?: 'success' | 'failure' | null;
+  lastTestAt?: Date;
+  errorMessage?: string;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+  onConfigure?: () => void;
+}
+
 export default function NotificationIntegrationCard({
   type,
   isConnected = false,
+  connectedSloCount = 0,
+  lastTestResult,
+  lastTestAt,
+  errorMessage,
   onConnect,
   onDisconnect,
   onConfigure,
 }: NotificationIntegrationCardProps) {
-  const [connected, setConnected] = useState(isConnected);
-  useEffect(() => {
-    setConnected(isConnected);
-  }, [isConnected]);
+  const connected = isConnected;
+  const relativeLastTest = formatRelative(lastTestAt);
+
   const config = integrationConfig[type];
 
   const handleToggle = () => {
     if (connected) {
       onDisconnect?.();
-      setConnected(false);
     } else {
-      // Only trigger parent connect flow (open modal). Do NOT set local connected=true here.
       onConnect?.();
     }
   };
 
-  const handleConfigure = () => {
-    onConfigure?.();
-  };
+  const handleConfigure = () => onConfigure?.();
 
   return (
     <div
-      className={`relative bg-white rounded-lg border ${config.borderColor} ${config.hoverBorderColor} p-4 transition-all duration-300 hover:shadow-md flex flex-col items-center text-center cursor-pointer group`}
       onClick={handleToggle}
+      className={`
+        group relative flex flex-col items-center text-center cursor-pointer
+        rounded-xl border bg-white p-5 shadow-sm transition-all duration-300
+        ${config.borderColor} ${config.hoverBorderColor}
+        hover:shadow-lg hover:scale-[1.015]
+      `}
     >
-      {/* 연결 상태 인디케이터 */}
+      {/* 연결 시 우측 상단 초록 점 */}
       {connected && (
         <div className="absolute top-2 right-2">
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            <span className="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative h-2 w-2 rounded-full bg-green-500"></span>
           </span>
         </div>
       )}
 
       {/* 아이콘 */}
       <div
-        className={`inline-flex items-center justify-center w-12 h-12 rounded-lg ${config.bgColor} mb-3 group-hover:scale-110 transition-transform duration-200`}
+        className={`
+          flex items-center justify-center w-14 h-14 rounded-xl
+          ${config.bgColor} ${config.iconColor}
+          transition-transform duration-300 group-hover:scale-110 shadow-inner
+        `}
       >
-        <div className={config.iconColor}>{config.icon}</div>
+        {config.icon}
       </div>
 
       {/* 제목 */}
-      <h3 className="text-sm font-bold text-gray-900 mb-1">{config.name}</h3>
+      <h3 className="mt-3 text-base font-bold text-gray-900">{config.name}</h3>
 
-      {/* 상태 */}
-      <div className="mb-3">
-        {connected ? (
-          <span className="text-xs text-green-600 font-medium">연결됨</span>
-        ) : (
-          <span className="text-xs text-gray-500">연결 안됨</span>
+      {/* 설명 */}
+      <p className="text-xs text-gray-500 mt-1 mb-3">{config.description}</p>
+
+      {/* 상태 정보 */}
+      <div className="w-full text-left text-xs text-gray-700 space-y-1 mb-4">
+        <div className="flex items-center justify-between font-semibold">
+          <span>{connected ? '연결됨' : '연결 안됨'}</span>
+          <span>{connectedSloCount}개 SLO</span>
+        </div>
+
+        {/* 테스트 결과 */}
+        {lastTestResult && (
+          <div
+            className={`font-semibold ${
+              lastTestResult === 'success' ? 'text-green-600' : 'text-red-600'
+            }`}
+          >
+            테스트 메시지: {lastTestResult === 'success' ? '성공' : '실패'} (
+            {relativeLastTest || '방금 전'})
+          </div>
         )}
+
+        {/* 오류 메시지 */}
+        {errorMessage && <div className="text-red-600">연동 오류 · {errorMessage}</div>}
       </div>
 
-      {/* 설정 버튼 (연결된 경우) */}
+      {/* 설정 버튼 */}
       {connected && (
         <button
           onClick={(e) => {
             e.stopPropagation();
             handleConfigure();
           }}
-          className="w-full px-3 py-1.5 rounded-md border border-gray-300 text-xs text-gray-700 font-medium hover:border-gray-400 hover:bg-gray-50 transition-all duration-200"
+          className="
+            w-full px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200
+            border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400
+          "
         >
           설정
         </button>
