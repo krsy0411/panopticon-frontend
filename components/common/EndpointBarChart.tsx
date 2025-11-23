@@ -200,8 +200,8 @@ export default function EndpointBarChart({
             show: true,
             position: 'top',
             formatter: (p: { value: number }) => {
-              if (selectedMetric === 'error_rate') return `${p.value.toFixed(2)}`;
-              if (selectedMetric === 'latency') return `${p.value}`;
+              if (selectedMetric === 'error_rate') return `${p.value.toFixed(2)}%`;
+              if (selectedMetric === 'latency') return `${p.value} ms`;
               return Number(p.value).toLocaleString();
             },
           },
