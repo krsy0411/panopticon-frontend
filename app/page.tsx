@@ -6,14 +6,6 @@ import UnAuthenticatedHeader from '@/components/common/Header';
 export default function LandingPage() {
   const router = useRouter();
 
-  // // Galmuri 폰트 동적 로드 (Landing 전용)
-  // useEffect(() => {
-  //   const link = document.createElement('link');
-  //   link.href = 'https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css';
-  //   link.rel = 'stylesheet';
-  //   document.head.appendChild(link);
-  // }, []);
-
   const handleNavigate = () => {
     router.push('/auth');
   };
