@@ -6,7 +6,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 인증이 필요 없는 경로
-  const publicPaths = ['/', '/auth', '/api/auth'];
+  const publicPaths = ['/', '/auth'];
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
 
   // 만약 랜딩('/')에 접근 중이고 이미 auth-token 쿠키가 있으면

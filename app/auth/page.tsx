@@ -7,13 +7,15 @@ import { FcGoogle } from 'react-icons/fc';
 
 export default function LoginPage() {
   const handleGithubLogin = () => {
-    // GitHub OAuth 로그인 시작
-    window.location.href = '/api/auth/github';
+    // GitHub OAuth 로그인 시작 - authserver로 직접 이동
+    const authServerUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL;
+    window.location.href = `${authServerUrl}/auth/github`;
   };
 
   const handleGoogleLogin = () => {
-    // Google OAuth 로그인 시작
-    window.location.href = '/api/auth/google';
+    // Google OAuth 로그인 시작 - authserver로 직접 이동
+    const authServerUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL;
+    window.location.href = `${authServerUrl}/auth/google`;
   };
 
   return (

@@ -5,7 +5,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AuthResponse } from '@/src/types/auth';
 
 const fetchCurrentUser = async (): Promise<AuthResponse> => {
-  const response = await fetch('/api/auth/me', {
+  const authServerUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL;
+  if (!authServerUrl) {
+    return { authenticated: false };
+  }
+
+  const response = await fetch(`${authServerUrl}/users/me`, {
     credentials: 'include',
   });
 
@@ -17,7 +22,12 @@ const fetchCurrentUser = async (): Promise<AuthResponse> => {
 };
 
 const logout = async (): Promise<void> => {
-  const response = await fetch('/api/auth/logout', {
+  const authServerUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL;
+  if (!authServerUrl) {
+    throw new Error('Auth server URL not configured');
+  }
+
+  const response = await fetch(`${authServerUrl}/auth/logout`, {
     method: 'POST',
     credentials: 'include',
   });
