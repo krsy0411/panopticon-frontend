@@ -7,17 +7,18 @@ import { FcGoogle } from 'react-icons/fc';
 
 export default function LoginPage() {
   const handleGithubLogin = () => {
-    // GitHub OAuth 로그인 시작 - authserver로 직접 이동
+    // GitHub OAuth 로그인 시작 - authserver의 OAuth initiation endpoint로 이동
+    // authserver가 GitHub OAuth URL을 생성해서 리다이렉트함
     const authServerUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL;
     window.location.href = `${authServerUrl}/github`;
   };
 
   const handleGoogleLogin = () => {
-    // Google OAuth 로그인 시작 - authserver로 직접 이동
+    // Google OAuth 로그인 시작 - authserver의 OAuth initiation endpoint로 이동
+    // authserver가 Google OAuth URL을 생성해서 리다이렉트함
     const authServerUrl = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL;
     window.location.href = `${authServerUrl}/google`;
   };
-
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md">

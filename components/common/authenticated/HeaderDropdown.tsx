@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 interface DropdownItem {
   href: string;
@@ -26,19 +26,37 @@ export const HeaderDropdown = ({
   items,
 }: HeaderDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleMouseEnter = () => setIsOpen(true);
-  const handleMouseLeave = () => setIsOpen(false);
+  const openDropdown = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setIsOpen(true);
+  };
+
+  const closeDropdownWithDelay = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+    }
+
+    closeTimerRef.current = setTimeout(() => {
+      setIsOpen(false);
+      closeTimerRef.current = null;
+    }, 200); // small delay so users can move into the dropdown without it closing
+  };
+
   const handleTriggerClick = () => setIsOpen(false);
   const handleItemClick = () => setIsOpen(false);
 
   return (
     <div
       className="relative"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onFocusCapture={handleMouseEnter}
-      onBlurCapture={handleMouseLeave}
+      onMouseEnter={openDropdown}
+      onMouseLeave={closeDropdownWithDelay}
+      onFocusCapture={openDropdown}
+      onBlurCapture={closeDropdownWithDelay}
     >
       <Link
         href={triggerHref}
@@ -56,6 +74,7 @@ export const HeaderDropdown = ({
         className={`absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg transition-all duration-150 ${
           isOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-1'
         }`}
+        onMouseEnter={openDropdown}
       >
         {/* 제목 */}
         <div className="p-4 border-b border-gray-200">

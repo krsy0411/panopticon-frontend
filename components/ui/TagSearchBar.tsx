@@ -86,6 +86,11 @@ export default function TagSearchBar({
     return source.filter((v) => v.toLowerCase().includes(currentValue));
   };
 
+  // 제안이 없으면 드롭다운을 숨겨 검색창 아래에 빈 여백이 생기지 않도록 함
+  const valueSuggestions = getFilteredValues();
+  const shouldShowDropdown =
+    showDropdown && (isKeyTyping ? filteredKeySuggestions.length > 0 : true);
+
   // 외부 클릭 감지
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -155,7 +160,7 @@ export default function TagSearchBar({
       </div>
 
       {/* 드롭다운 */}
-      {showDropdown && (
+      {shouldShowDropdown && (
         <div
           ref={dropdownRef}
           className="
@@ -175,7 +180,7 @@ export default function TagSearchBar({
             ))
           ) : (
             <>
-              {getFilteredValues().map((v) => (
+              {valueSuggestions.map((v) => (
                 <div
                   key={v}
                   className="px-3 py-2 hover:bg-gray-100 rounded-md cursor-pointer"
@@ -185,7 +190,7 @@ export default function TagSearchBar({
                 </div>
               ))}
 
-              {getFilteredValues().length === 0 && (
+              {valueSuggestions.length === 0 && (
                 <div className="px-3 py-2 text-gray-500">검색 결과 없음</div>
               )}
             </>

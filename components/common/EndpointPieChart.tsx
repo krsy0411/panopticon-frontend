@@ -31,18 +31,20 @@ export default function EndpointPieChart({
   colors,
 }: Props) {
   const pieOption = useMemo(() => {
-    const palette = colors && colors.length > 0 ? colors : undefined; // 팔레트 있으면 적용
+    const defaultColors = ['#537FE7', '#5BC0BE', '#FFB562', '#F472B6', '#A78BFA'];
+    const palette = colors && colors.length > 0 ? colors : defaultColors;
 
-    const pieData = (items || []).map((ep) => {
+    const pieData = (items || []).map((ep, idx) => {
       let value: number = ep.request_count ?? 0;
       if (selectedMetric === 'error_rate') value = (ep.error_rate ?? 0) * 100;
       if (selectedMetric === 'latency') value = ep.latency_p95_ms ?? 0;
+      const itemColor = ep.color || palette[idx % palette.length];
       return {
         name: ep.endpoint_name,
         value,
         endpointData: ep,
         itemStyle: {
-          color: ep.color, // 여기서 강제로 색 고정
+          color: itemColor,
         },
       };
     });

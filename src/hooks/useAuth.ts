@@ -18,7 +18,8 @@ const fetchCurrentUser = async (): Promise<AuthResponse> => {
     return { authenticated: false };
   }
 
-  return response.json();
+  const user = await response.json();
+  return { authenticated: true, user };
 };
 
 const logout = async (): Promise<void> => {
