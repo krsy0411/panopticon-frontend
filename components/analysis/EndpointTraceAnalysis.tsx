@@ -132,8 +132,8 @@ export default function EndpointTraceAnalysis({
 
   // Status 드롭다운 옵션
   const statusOptions = [
-    { label: 'Error', value: 'ERROR' as const },
-    { label: 'Slow', value: 'SLOW' as const },
+    { label: '에러 (최신순)', value: 'ERROR' as const },
+    { label: '느린순', value: 'SLOW' as const },
   ];
 
   // 트레이스 클릭 핸들러

@@ -214,7 +214,7 @@ export default function MetricIntervalPanel({
     try {
       return (
         <>
-          <SlideOverLayout isOpen={isOpen} onClose={handleClose} widthClass="w-[70vw]">
+          <SlideOverLayout isOpen={isOpen} onClose={handleClose} widthClass="w-[75%]">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
               <div className="flex-1">
@@ -392,7 +392,7 @@ export default function MetricIntervalPanel({
     } catch (err) {
       console.error('MetricIntervalPanel render error:', err);
       return (
-        <SlideOverLayout isOpen={isOpen} onClose={handleClose} widthClass="w-[80%]">
+        <SlideOverLayout isOpen={isOpen} onClose={handleClose}>
           <div className="p-4">
             <div className="text-red-600">오류가 발생했습니다: 패널을 열 수 없습니다.</div>
           </div>
