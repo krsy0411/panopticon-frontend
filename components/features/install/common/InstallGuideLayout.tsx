@@ -39,7 +39,7 @@ export default function InstallGuideLayout({ steps, icon }) {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-cyan-50">
+    <div className="bg-linear-to-br from-blue-50 via-white to-cyan-50">
       {/* scroll target */}
       <div id="top"></div>
 

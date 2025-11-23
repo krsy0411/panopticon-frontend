@@ -23,7 +23,7 @@ export default function ApmLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       <div className="flex gap-6 px-8 py-8">
         <div className="flex flex-col gap-4 sticky top-6 h-fit">
           <Sidebar />

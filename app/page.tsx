@@ -19,7 +19,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden font-[Galmuri11]">
+    <div className="bg-white relative overflow-hidden font-[Galmuri11]">
       {/* ✅ 공통 헤더 재사용 */}
       <UnAuthenticatedHeader handleNavigate={handleNavigate} />
 

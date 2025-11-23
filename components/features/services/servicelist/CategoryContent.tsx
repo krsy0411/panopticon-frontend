@@ -2,7 +2,8 @@
 
 import StateHandler from '@/components/ui/StateHandler';
 import ServiceListTable from './Table';
-import ServiceCardGrid from './cards/ServiceCardGrid';
+import AddServiceCard from './cards/AddServiceCard';
+import ServiceCard from './cards/ServiceCard';
 
 import type { CategoryContentProps, ServiceListCategory } from '@/types/servicelist';
 
@@ -53,21 +54,21 @@ export default function CategoryContent({
   }
 
   return (
-    <StateHandler
-      isLoading={isLoading}
-      isError={isError}
-      isEmpty={isEmpty}
-      type="general"
-      height={420}
-      loadingMessage="서비스 목록을 불러오는 중..."
-      errorMessage="서비스 목록을 불러올 수 없습니다"
-      emptyMessage="표시할 서비스가 없습니다"
-    >
-      <ServiceCardGrid
-        services={services}
-        onCardClick={cardClickHandler}
-        onCreateClick={onCreateClick}
-      />
-    </StateHandler>
+    <div>
+      {/* 항상 노출되는 Add 카드 + 서비스 카드 그리드 (ServiceCardGrid 제거 후 인라인) */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        <div className="col-span-1">
+          <AddServiceCard onClick={onCreateClick} />
+        </div>
+
+        {services.map((service) => (
+          <ServiceCard
+            key={service.service_name}
+            service={service}
+            onClick={cardClickHandler ? () => cardClickHandler(service) : undefined}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

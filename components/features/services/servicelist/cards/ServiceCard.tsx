@@ -55,7 +55,7 @@ export default function ServiceCard({ service, onClick }: ServiceCardProps) {
       onKeyDown={handleKeyDown}
       className={`rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md ${
         isInteractive
-          ? 'cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
+          ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
           : ''
       }`}
     >

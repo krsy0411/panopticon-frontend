@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -6,10 +6,8 @@ import { useQuery } from '@tanstack/react-query';
 import ServiceListSidebar from '@/components/features/services/servicelist/Sidebar';
 import CategoryContent from '@/components/features/services/servicelist/CategoryContent';
 import ServiceListFilters from '@/components/features/services/servicelist/Filters';
-import CreateServiceModal from '@/components/features/services/servicelist/CreateService';
 import { SelectDate } from '@/components/features/services/SelectDate';
 import Breadcrumb from '@/components/ui/Breadcrumb';
-import type { CreateServiceFormValues } from '@/types/CreateService';
 import { getServices } from '@/src/api/apm';
 import type { ServiceSummary } from '@/types/apm';
 import type { ServiceListCategory } from '@/types/servicelist';
@@ -21,10 +19,6 @@ export default function ServicesPage() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-  const [serviceModalMode, setServiceModalMode] = useState<'create' | 'edit'>('create');
-  const [serviceModalInitialValues, setServiceModalInitialValues] =
-    useState<Partial<CreateServiceFormValues>>();
 
   // 시간 범위 생성
   const timeRange = useMemo(() => {
@@ -84,69 +78,18 @@ export default function ServicesPage() {
 
   const isEmpty = !isLoading && filteredServices.length === 0;
 
-  const openServiceModal = (
-    mode: 'create' | 'edit',
-    initialValues?: Partial<CreateServiceFormValues>,
-  ) => {
-    setServiceModalMode(mode);
-    setServiceModalInitialValues(initialValues);
-    setIsServiceModalOpen(true);
-  };
-
+  // Agent 설치 페이지로 이동
   const handleCreateClick = () => {
-    openServiceModal('create');
+    router.push('/services/install');
   };
 
   const handleEditClick = () => {
-    const targetService = filteredServices[0];
-    if (targetService) {
-      openServiceModal('edit', {
-        serviceName: targetService.service_name,
-        environment: targetService.environment,
-      });
-      return;
-    }
-    openServiceModal('edit');
-  };
-
-  const deriveInstallScenario = (
-    values: CreateServiceFormValues,
-  ): 'frontend-trace' | 'backend-log' | 'backend-trace' | 'backend-log-trace' | null => {
-    if (values.serviceType === 'ui') {
-      return 'frontend-trace';
-    }
-
-    if (values.serviceType === 'api') {
-      if (values.collectLogs && values.collectTraces) return 'backend-log-trace';
-      if (values.collectLogs) return 'backend-log';
-      if (values.collectTraces) return 'backend-trace';
-    }
-
-    return null;
-  };
-
-  // 설치 시작 클릭 -> Install Agent 페이지
-  const handleServiceModalSubmit = (formValues: CreateServiceFormValues) => {
-    setIsServiceModalOpen(false);
-
-    const scenario = deriveInstallScenario(formValues);
-    if (!scenario) {
-      router.push('/services/install');
-      return;
-    }
-
-    const params = new URLSearchParams({
-      scenario,
-      serviceType: formValues.serviceType,
-      collectLogs: String(formValues.collectLogs),
-      collectTraces: String(formValues.collectTraces),
-    });
-
-    router.push(`/services/install?${params.toString()}`);
+    // TODO: 기존 서비스 설정 수정 로직
+    console.log('Edit service functionality coming soon');
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8 space-y-6">
+    <div className="bg-gray-50 p-8 space-y-6">
       <section className="flex flex-col gap-6 lg:flex-row">
         {/* 좌측 사이드바 */}
         <aside className="w-full lg:w-56 shrink-0 space-y-4 lg:sticky lg:top-6 lg:self-start lg:z-10">
@@ -196,13 +139,6 @@ export default function ServicesPage() {
           />
         </main>
       </section>
-      <CreateServiceModal
-        open={isServiceModalOpen}
-        mode={serviceModalMode}
-        initialValues={serviceModalInitialValues}
-        onClose={() => setIsServiceModalOpen(false)}
-        onSubmit={handleServiceModalSubmit}
-      />
     </div>
   );
 }

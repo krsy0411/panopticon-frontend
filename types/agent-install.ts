@@ -1,49 +1,59 @@
-export type InstallStep = 1 | 2 | 3 | 4;
+/**
+ * Agent 설치 흐름에서 사용되는 타입들
+ */
 
-export interface MonitoringOptions {
-  traces: boolean;
-  metrics: boolean;
-  logs: boolean;
+export type AgentRuntime = 'nodejs' | 'python' | 'java' | 'go' | 'php' | 'dotnet' | 'ruby';
+
+export interface Agent {
+  id: AgentRuntime;
+  label: string;
+  description: string;
+  icon?: string;
+  frameworks: Framework[];
+  isComingSoon?: boolean;
 }
 
-export interface StepConfig {
-  total: number;
-  showOptions: boolean;
+export interface Framework {
+  id: string;
+  label: string;
+  runtime: AgentRuntime;
 }
 
-export type PlatformType =
-  | 'kubernetes'
+export type InstrumentationMethod = 'auto' | 'manual' | 'container';
+
+export type RuntimeEnvironment =
   | 'docker'
+  | 'kubernetes'
   | 'ecs'
-  | 'macos'
-  | 'opentelemetry'
-  | 'fluentbit';
+  | 'lambda'
+  | 'linux-host'
+  | 'windows';
 
-export interface PlatformData {
-  icon: React.ReactNode;
-  iconLarge: React.ReactNode;
-  title: string;
-  description: string;
-  steps: InstallationStep[];
-  category: 'Container Platform' | 'Host based' | 'Monitoring' | 'Log Collection';
+export type TelemetryType = 'traces' | 'metrics' | 'logs' | 'profiling';
+
+export interface AgentSetupFormValues {
+  // Step 1: Language 선택
+  agentRuntime: AgentRuntime;
+  framework: string;
+
+  // Step 2: Runtime Environment 선택
+  runtimeEnvironment: RuntimeEnvironment;
+
+  // Step 3: Instrumentation Method 선택
+  instrumentationMethod: InstrumentationMethod;
+
+  // Step 4: Telemetry Type & Service Info
+  telemetryTypes: TelemetryType[];
+  licenseKey: string;
+  serviceName: string;
+  serviceEnvironment: string;
+
+  // Step 5: Validation - 자동으로 설정됨
+  validationStatus?: 'pending' | 'success' | 'failed';
 }
 
-// Application Monitoring Types
-export type FrameworkType = 'nodejs' | 'nextjs' | 'python';
-
-export interface InstallationStep {
-  title: string;
-  description?: string;
-  code?: string;
-  language?: string;
-}
-
-export interface FrameworkData {
-  icon: React.ReactNode;
-  iconLarge: React.ReactNode;
-  title: string;
-  description: string;
-  category: 'Backend' | 'Frontend' | 'Fullstack';
-  steps: InstallationStep[];
-  packageManager?: 'npm' | 'pip' | 'go';
+export interface AgentSetupModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onComplete?: (values: AgentSetupFormValues) => void;
 }

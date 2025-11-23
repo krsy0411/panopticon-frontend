@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 export default function GlobalError({ reset }: { reset: () => void }) {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4 bg-white text-center">
+    <main className="flex flex-col items-center justify-center px-4 bg-white text-center">
       <Image
         src="/errorpage/500.png"
         alt="500 고양이"

@@ -16,7 +16,7 @@ export default function AddServiceCard({ onClick }: AddServiceCardProps) {
       type="button"
       onClick={onClick}
       disabled={isDisabled}
-      className={`min-h-[220px] rounded-2xl border-2 border-dashed border-gray-300 bg-white p-5 flex flex-col items-center justify-center text-gray-500 transition hover:-translate-y-1 hover:shadow-md ${
+      className={`min-h-[220px] w-full rounded-2xl border-2 border-dashed border-gray-300 bg-white p-5 flex flex-col items-center justify-center text-gray-500 transition hover:-translate-y-1 hover:shadow-md ${
         isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
       }`}
     >
