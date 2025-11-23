@@ -27,7 +27,7 @@ const logout = async (): Promise<void> => {
     throw new Error('Auth server URL not configured');
   }
 
-  const response = await fetch(`${authServerUrl}/auth/logout`, {
+  const response = await fetch(`${authServerUrl}/logout`, {
     method: 'POST',
     credentials: 'include',
   });
