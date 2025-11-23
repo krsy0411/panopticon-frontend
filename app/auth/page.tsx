@@ -17,7 +17,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         {/* 로고 + 제목 */}
         <div className="text-center mb-8">

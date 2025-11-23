@@ -46,17 +46,17 @@ export const UserProfile = () => {
         className="flex items-center gap-2 hover:opacity-80 transition"
         aria-label="User menu"
       >
-        {user.avatar_url ? (
+        {user.avatarUrl || user.avatar_url ? (
           <Image
-            src={user.avatar_url}
-            alt={user.login}
+            src={user.avatarUrl || user.avatar_url!}
+            alt={user.displayName || user.login || user.email}
             width={32}
             height={32}
             className="rounded-full"
           />
         ) : (
           <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-            {user.login.charAt(0).toUpperCase()}
+            {(user.displayName || user.login || user.email || 'U').charAt(0).toUpperCase()}
           </div>
         )}
         <FiChevronDown
@@ -69,21 +69,23 @@ export const UserProfile = () => {
           {/* 사용자 정보 */}
           <div className="px-4 py-3 border-b border-zinc-200">
             <div className="flex items-center gap-3">
-              {user.avatar_url ? (
+              {user.avatarUrl || user.avatar_url ? (
                 <Image
-                  src={user.avatar_url}
-                  alt={user.login}
+                  src={user.avatarUrl || user.avatar_url!}
+                  alt={user.displayName || user.login || user.email}
                   width={40}
                   height={40}
                   className="rounded-full"
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white text-lg">
-                  {user.login.charAt(0).toUpperCase()}
+                  {(user.displayName || user.login || user.email || 'U').charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-zinc-900 truncate">{user.login}</p>
+                <p className="text-sm font-semibold text-zinc-900 truncate">
+                  {user.displayName || user.login || user.email}
+                </p>
                 <p className="text-xs text-zinc-500 truncate">{user.email}</p>
               </div>
             </div>

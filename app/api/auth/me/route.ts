@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { verifyJwt } from '@/lib/jwt';
 
 export async function GET() {
   try {
@@ -11,26 +10,48 @@ export async function GET() {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    const { valid, payload } = await verifyJwt(token);
+    // panopticon_authserver의 /users/me 엔드포인트 호출
+    const authApiBase = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL;
 
-    if (!valid || !payload) {
-      return NextResponse.json({ authenticated: false }, { status: 401 });
+    if (!authApiBase) {
+      return NextResponse.json(
+        { authenticated: false, error: 'Auth server is not configured' },
+        { status: 500 },
+      );
     }
+
+    const authResponse = await fetch(`${authApiBase.replace(/\/$/, '')}/users/me`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!authResponse.ok) {
+      const errorData = await authResponse.text();
+      console.error('[Auth] Auth server error response:', {
+        status: authResponse.status,
+        body: errorData,
+      });
+
+      if (authResponse.status === 401) {
+        return NextResponse.json({ authenticated: false }, { status: 401 });
+      }
+      throw new Error(`Auth server responded with status ${authResponse.status}: ${errorData}`);
+    }
+
+    const userData = await authResponse.json();
 
     return NextResponse.json({
       authenticated: true,
-      user: {
-        id: payload.sub,
-        github_id: payload.github_id,
-        google_id: payload.google_id,
-        login: payload.login,
-        email: payload.email,
-        avatar_url: payload.avatar_url,
-        provider: payload.provider,
-      },
+      user: userData,
     });
   } catch (error) {
     console.error('Auth me error:', error);
-    return NextResponse.json({ authenticated: false }, { status: 500 });
+    return NextResponse.json(
+      { authenticated: false, error: 'Failed to fetch user info' },
+      { status: 500 },
+    );
   }
 }

@@ -4,12 +4,20 @@
 
 export interface User {
   id: string;
+  email: string;
+  displayName?: string;
+  avatarUrl?: string;
+  emailVerified?: boolean;
+  role?: string;
+  provider?: string | null;
+  lastLoginAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // Legacy fields for backward compatibility
   github_id?: string;
   google_id?: string;
-  login: string;
-  email: string;
-  avatar_url: string;
-  provider: 'github' | 'google';
+  login?: string;
+  avatar_url?: string;
 }
 
 export interface AuthResponse {

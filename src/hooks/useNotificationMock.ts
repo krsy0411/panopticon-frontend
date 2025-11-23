@@ -3,10 +3,8 @@ import type {
   BaseSloRecord,
   ComputedSlo,
   IntegrationStatus,
-  IntegrationType,
   NotificationSummary,
   SloStatus,
-  SloTrendPoint,
   TimeRangeKey,
   TimeRangeOption,
 } from '../types/notification';

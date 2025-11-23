@@ -4,7 +4,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createJwt } from '@/lib/jwt';
 
 /**
  * GitHub OAuth 토큰 응답
@@ -111,38 +110,53 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Could not retrieve email from GitHub' }, { status: 400 });
     }
 
-    // 4. JWT 생성
-    const jwt = await createJwt({
-      github_id: String(githubUser.id),
-      login: githubUser.login,
-      email,
-      avatar_url: githubUser.avatar_url,
-      provider: 'github',
-    });
+    // 4. panopticon_authserver에 사용자 정보 업서트 요청하여 JWT 획득
+    const authApiBase = process.env.NEXT_PUBLIC_AUTH_API_BASE_URL;
 
-    // 5. (선택) 백엔드 API에 유저 정보 업서트 요청
+    if (!authApiBase) {
+      return NextResponse.json({ error: 'Auth server is not configured' }, { status: 500 });
+    }
+
+    let jwt = '';
     try {
-      const apiBase = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || '';
-      if (apiBase) {
-        await fetch(`${apiBase.replace(/\/$/, '')}/users`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${jwt}`,
-          },
-          body: JSON.stringify({
-            github_id: String(githubUser.id),
-            login: githubUser.login,
-            email,
-            avatar_url: githubUser.avatar_url,
-            provider: 'github',
-          }),
-        });
-      } else {
-        console.warn('[Auth] API_BASE_URL not configured; skipping user upsert');
+      const authResponse = await fetch(`${authApiBase.replace(/\/$/, '')}/users/oauth`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          provider: 'github',
+          github_id: String(githubUser.id),
+          login: githubUser.login,
+          email,
+          avatar_url: githubUser.avatar_url,
+        }),
+      });
+
+      if (!authResponse.ok) {
+        const errorData = await authResponse.json().catch(() => ({}));
+        console.error('[Auth] Auth server error response:', errorData);
+        throw new Error(`Auth server responded with status ${authResponse.status}`);
       }
+
+      const authData = await authResponse.json();
+      jwt = authData.token;
+
+      if (!jwt) {
+        throw new Error('No token received from auth server');
+      }
+
+      console.log('[Auth] User upserted successfully from authserver');
+      console.log('[Auth] AuthServer response:', {
+        token: jwt ? '***' : 'MISSING',
+        user: authData.user,
+      });
     } catch (e) {
-      console.error('[Auth] Failed to upsert user to backend:', e);
+      console.error('[Auth] Error upserting user to authserver:', e);
+      return NextResponse.json(
+        { error: 'Failed to authenticate with auth server' },
+        { status: 500 },
+      );
     }
 
     // 5. 쿠키에 JWT 저장하고 메인 페이지로 리다이렉트
