@@ -103,9 +103,16 @@ export default function AgentSelectionPage() {
 
                 {/* Coming Soon 배지 */}
                 {isDisabled && (
-                  <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[1px] z-20">
-                    <span className="text-2xl font-semibold text-gray-300 transform -rotate-20">
-                      준비 중
+                  <div
+                    className="
+      absolute inset-0 z-20
+      flex items-center justify-center
+      bg-gray-300/50      /* 어둡게 */
+      backdrop-blur-[1px] /* 흐림 */
+    "
+                  >
+                    <span className="text-2xl font-medium tracking-normal text-black-900">
+                      Coming soon
                     </span>
                   </div>
                 )}
