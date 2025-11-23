@@ -2,13 +2,14 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { TIME_RANGE_DURATION_MS } from '@/src/utils/timeRange';
 import StateHandler from '@/components/ui/StateHandler';
 import MetricIntervalPanel from './MetricIntervalPanel';
 
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
+const CHART_ORDER = ['requests', 'errorRate', 'latency'] as const;
 
 interface Props {
   requestsOption: any;
@@ -32,9 +33,37 @@ export default function OverviewCharts({
   serviceName,
 }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [legendSelection, setLegendSelection] = useState<{
+    requests: Record<string, boolean>;
+    errorRate: Record<string, boolean>;
+    latency: Record<string, boolean>;
+  }>(() => ({
+    requests: extractLegendState(requestsOption),
+    errorRate: extractLegendState(errorRateOption),
+    latency: extractLegendState(latencyOption),
+  }));
+
+  const syncedLegendSelection = useMemo(
+    () => ({
+      requests: syncLegendSelection(legendSelection.requests, requestsOption),
+      errorRate: syncLegendSelection(legendSelection.errorRate, errorRateOption),
+      latency: syncLegendSelection(legendSelection.latency, latencyOption),
+    }),
+    [legendSelection, requestsOption, errorRateOption, latencyOption],
+  );
 
   const toggle = (key: string) => {
-    setSelected((prev) => (prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]));
+    setSelected((prev) => {
+      if (prev.includes(key)) {
+        return prev.filter((p) => p !== key);
+      }
+      const next = [...prev, key];
+      return next.sort(
+        (a, b) =>
+          CHART_ORDER.indexOf(a as (typeof CHART_ORDER)[number]) -
+          CHART_ORDER.indexOf(b as (typeof CHART_ORDER)[number]),
+      );
+    });
   };
 
   const selectedCount = selected.length;
@@ -62,10 +91,15 @@ export default function OverviewCharts({
     if (key === 'requests')
       return (
         <ReactECharts
-          option={requestsOption}
+          option={withLegendSelection(requestsOption, syncedLegendSelection.requests)}
           style={{ height: selectedCount === 1 ? 420 : 320 }}
           notMerge={true}
           onEvents={{
+            legendselectchanged: (params: any) => {
+              if (params?.selected) {
+                setLegendSelection((prev) => ({ ...prev, requests: { ...params.selected } }));
+              }
+            },
             click: (params: any) => {
               const ts =
                 (params?.value && (Array.isArray(params.value) ? params.value[0] : params.value)) ||
@@ -78,10 +112,15 @@ export default function OverviewCharts({
     if (key === 'errorRate')
       return (
         <ReactECharts
-          option={errorRateOption}
+          option={withLegendSelection(errorRateOption, syncedLegendSelection.errorRate)}
           style={{ height: selectedCount === 1 ? 420 : 320 }}
           notMerge={true}
           onEvents={{
+            legendselectchanged: (params: any) => {
+              if (params?.selected) {
+                setLegendSelection((prev) => ({ ...prev, errorRate: { ...params.selected } }));
+              }
+            },
             click: (params: any) => {
               const ts =
                 (params?.value && (Array.isArray(params.value) ? params.value[0] : params.value)) ||
@@ -94,10 +133,15 @@ export default function OverviewCharts({
     if (key === 'latency')
       return (
         <ReactECharts
-          option={latencyOption}
+          option={withLegendSelection(latencyOption, syncedLegendSelection.latency)}
           style={{ height: selectedCount === 1 ? 420 : 320 }}
           notMerge={true}
           onEvents={{
+            legendselectchanged: (params: any) => {
+              if (params?.selected) {
+                setLegendSelection((prev) => ({ ...prev, latency: { ...params.selected } }));
+              }
+            },
             click: (params: any) => {
               const ts =
                 (params?.value && (Array.isArray(params.value) ? params.value[0] : params.value)) ||
@@ -164,10 +208,18 @@ export default function OverviewCharts({
                 emptyMessage="표시할 메트릭 데이터가 없습니다"
               >
                 <ReactECharts
-                  option={requestsOption}
+                  option={withLegendSelection(requestsOption, syncedLegendSelection.requests)}
                   style={{ height: 250 }}
                   notMerge={true}
                   onEvents={{
+                    legendselectchanged: (params: any) => {
+                      if (params?.selected) {
+                        setLegendSelection((prev) => ({
+                          ...prev,
+                          requests: { ...params.selected },
+                        }));
+                      }
+                    },
                     click: (params: any) => {
                       const ts =
                         (params?.value &&
@@ -191,10 +243,18 @@ export default function OverviewCharts({
                 emptyMessage="표시할 에러율 데이터가 없습니다"
               >
                 <ReactECharts
-                  option={errorRateOption}
+                  option={withLegendSelection(errorRateOption, syncedLegendSelection.errorRate)}
                   style={{ height: 250 }}
                   notMerge={true}
                   onEvents={{
+                    legendselectchanged: (params: any) => {
+                      if (params?.selected) {
+                        setLegendSelection((prev) => ({
+                          ...prev,
+                          errorRate: { ...params.selected },
+                        }));
+                      }
+                    },
                     click: (params: any) => {
                       const ts =
                         (params?.value &&
@@ -218,10 +278,18 @@ export default function OverviewCharts({
                 emptyMessage="표시할 레이턴시 데이터가 없습니다"
               >
                 <ReactECharts
-                  option={latencyOption}
+                  option={withLegendSelection(latencyOption, syncedLegendSelection.latency)}
                   style={{ height: 250 }}
                   notMerge={true}
                   onEvents={{
+                    legendselectchanged: (params: any) => {
+                      if (params?.selected) {
+                        setLegendSelection((prev) => ({
+                          ...prev,
+                          latency: { ...params.selected },
+                        }));
+                      }
+                    },
                     click: (params: any) => {
                       const ts =
                         (params?.value &&
@@ -285,4 +353,44 @@ export default function OverviewCharts({
       />
     </div>
   );
+}
+
+function extractLegendState(option: any) {
+  const series = Array.isArray(option?.series) ? option.series : [];
+  const names = series
+    .map((s: any) => s?.name)
+    .filter((name): name is string => typeof name === 'string' && Boolean(name));
+  return names.reduce((acc, name) => {
+    acc[name] = true;
+    return acc;
+  }, {} as Record<string, boolean>);
+}
+
+function syncLegendSelection(prev: Record<string, boolean>, option: any) {
+  const series = Array.isArray(option?.series) ? option.series : [];
+  const names = series
+    .map((s: any) => s?.name)
+    .filter((name): name is string => typeof name === 'string' && Boolean(name));
+  if (!names.length) return prev;
+
+  const next = names.reduce((acc, name) => {
+    acc[name] = prev?.[name] ?? true;
+    return acc;
+  }, {} as Record<string, boolean>);
+
+  const unchanged =
+    Object.keys(next).length === Object.keys(prev || {}).length &&
+    Object.entries(next).every(([key, value]) => prev?.[key] === value);
+
+  return unchanged ? prev : next;
+}
+
+function withLegendSelection(option: any, selected: Record<string, boolean>) {
+  return {
+    ...option,
+    legend: {
+      ...(option?.legend || {}),
+      selected: selected || {},
+    },
+  };
 }
