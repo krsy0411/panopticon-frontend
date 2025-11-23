@@ -116,6 +116,14 @@ export default function EndpointBarChart({
       xAxis: {
         type: 'category',
         data: items.map((i) => i.endpoint_name),
+        axisLabel: {
+          // always show every label so middle items do not disappear on narrow charts
+          interval: 0,
+          color: '#374151',
+        },
+        axisTick: {
+          alignWithLabel: true,
+        },
       },
 
       yAxis: {
@@ -140,12 +148,11 @@ export default function EndpointBarChart({
           label: {
             show: true,
             position: 'top',
-            formatter: (p: { value: number }) =>
-              selectedMetric === 'error_rate'
-                ? `${p.value.toFixed(2)}%`
-                : selectedMetric === 'latency'
-                ? `${p.value} ms`
-                : p.value,
+            formatter: (p: { value: number }) => {
+              if (selectedMetric === 'error_rate') return `${p.value.toFixed(2)}%`;
+              if (selectedMetric === 'latency') return `${p.value} ms`;
+              return Number(p.value).toLocaleString();
+            },
           },
           itemStyle: { borderRadius: [4, 4, 0, 0] },
         },
