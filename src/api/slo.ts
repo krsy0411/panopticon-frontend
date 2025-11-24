@@ -46,7 +46,7 @@ export interface UpdateSloDto {
 // ==================== API Base URL ====================
 
 const getAuthServerUrl = (): string => {
-  return process.env.NEXT_PUBLIC_AUTH_SERVER_URL || 'http://localhost:8080';
+  return process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8080';
 };
 
 // ==================== Fetch 헬퍼 ====================
