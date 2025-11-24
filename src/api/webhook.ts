@@ -96,76 +96,76 @@ async function fetchWithAuth<T>(url: string, options: RequestInit = {}): Promise
 // ==================== API 함수들 ====================
 
 /**
- * POST /auth/webhooks
+ * POST /webhooks
  * 새로운 webhook 설정 생성
  */
 export const createWebhook = async (data: CreateWebhookDto): Promise<WebhookConfig> => {
-  return fetchWithAuth<WebhookConfig>('/auth/webhooks', {
+  return fetchWithAuth<WebhookConfig>('/webhooks', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 };
 
 /**
- * GET /auth/webhooks
+ * GET /webhooks
  * 사용자의 모든 webhook 설정 조회
  */
 export const getWebhooks = async (): Promise<WebhookConfig[]> => {
-  return fetchWithAuth<WebhookConfig[]>('/auth/webhooks', {
+  return fetchWithAuth<WebhookConfig[]>('/webhooks', {
     method: 'GET',
   });
 };
 
 /**
- * GET /auth/webhooks/:webhookId
+ * GET /webhooks/:webhookId
  * 특정 webhook 설정 조회
  */
 export const getWebhook = async (webhookId: string): Promise<WebhookConfig> => {
-  return fetchWithAuth<WebhookConfig>(`/auth/webhooks/${webhookId}`, {
+  return fetchWithAuth<WebhookConfig>(`/webhooks/${webhookId}`, {
     method: 'GET',
   });
 };
 
 /**
- * PATCH /auth/webhooks/:webhookId
+ * PATCH /webhooks/:webhookId
  * webhook 설정 업데이트
  */
 export const updateWebhook = async (
   webhookId: string,
   data: UpdateWebhookDto,
 ): Promise<WebhookConfig> => {
-  return fetchWithAuth<WebhookConfig>(`/auth/webhooks/${webhookId}`, {
+  return fetchWithAuth<WebhookConfig>(`/webhooks/${webhookId}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
   });
 };
 
 /**
- * DELETE /auth/webhooks/:webhookId
+ * DELETE /webhooks/:webhookId
  * webhook 설정 삭제
  */
 export const deleteWebhook = async (webhookId: string): Promise<void> => {
-  await fetchWithAuth<void>(`/auth/webhooks/${webhookId}`, {
+  await fetchWithAuth<void>(`/webhooks/${webhookId}`, {
     method: 'DELETE',
   });
 };
 
 /**
- * PATCH /auth/webhooks/:webhookId/toggle
+ * PATCH /webhooks/:webhookId/toggle
  * webhook 활성화/비활성화 토글
  */
 export const toggleWebhookEnabled = async (webhookId: string): Promise<WebhookConfig> => {
-  return fetchWithAuth<WebhookConfig>(`/auth/webhooks/${webhookId}/toggle`, {
+  return fetchWithAuth<WebhookConfig>(`/webhooks/${webhookId}/toggle`, {
     method: 'PATCH',
   });
 };
 
 /**
- * POST /auth/webhooks/:webhookId/test
+ * POST /webhooks/:webhookId/test
  * webhook 테스트 메시지 발송
  */
 export const testWebhook = async (webhookId: string): Promise<TestWebhookResponse> => {
-  return fetchWithAuth<TestWebhookResponse>(`/auth/webhooks/${webhookId}/test`, {
+  return fetchWithAuth<TestWebhookResponse>(`/webhooks/${webhookId}/test`, {
     method: 'POST',
   });
 };
