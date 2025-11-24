@@ -80,6 +80,7 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
   /* -------------------- 차트 공통 스타일 ------------------ */
   const baseStyle = {
     backgroundColor: 'transparent',
+    animation: false, // markLine 애니메이션 비활성화
     grid: { left: 55, right: 15, top: 60, bottom: 50 },
     tooltip: {
       trigger: 'axis',
@@ -119,12 +120,28 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
   };
 
   /* -------------------- 요청수 -------------------- */
+  // 요청수 평균 계산
+  const requestsAverage = useMemo(() => {
+    const values = chartData.requests.map((p: number[]) => p[1]);
+    const validValues = values.filter((v: number) => typeof v === 'number');
+    return validValues.length > 0
+      ? validValues.reduce((sum: number, v: number) => sum + v, 0) / validValues.length
+      : 0;
+  }, [chartData.requests]);
+
   const requestsOption = {
     ...baseStyle,
     title: {
       text: '요청수',
       left: 'center',
       textStyle: { fontSize: 14, color: '#374151', fontWeight: 600 },
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      borderColor: 'transparent',
+      textStyle: { color: '#f9fafb', fontSize: 12 },
+      padding: 6,
     },
     series: [
       {
@@ -137,20 +154,37 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
           opacity: 0.65,
           borderRadius: [0, 0, 0, 0],
         },
-      },
-      {
-        name: '요청수 (선)',
-        type: 'line',
-        data: chartData.requests,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#1e40af' },
-        itemStyle: { color: '#1e40af' },
+        markLine: {
+          symbol: 'none',
+          label: { show: false },
+          animationDuration: 0,
+          silent: true,
+          data: [
+            {
+              name: '평균',
+              yAxis: requestsAverage,
+              lineStyle: {
+                type: 'dashed',
+                color: '#1e40af',
+                width: 2,
+              },
+            },
+          ],
+        },
       },
     ],
   };
 
   /* -------------------- 에러율 -------------------- */
+  // 에러율 평균 계산
+  const errorRateAverage = useMemo(() => {
+    const values = chartData.errorRate.map((p: number[]) => p[1]);
+    const validValues = values.filter((v: number) => typeof v === 'number');
+    return validValues.length > 0
+      ? validValues.reduce((sum: number, v: number) => sum + v, 0) / validValues.length
+      : 0;
+  }, [chartData.errorRate]);
+
   const errorRateOption = {
     ...baseStyle,
     title: {
@@ -171,7 +205,7 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
           seriesName: string;
           value: number[];
         }
-        const list = params as TooltipParam[];
+        const list = Array.isArray(params) ? params : [params as TooltipParam];
         if (!list?.length) return '';
 
         const timestamp =
@@ -194,7 +228,7 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
             (p) =>
               `<div style="margin:2px 0;"><span style="color:${p.color}">●</span> ${
                 p.seriesName
-              }: ${p.value[1].toFixed(2)}%</div>`,
+              }: ${(p.value[1] ?? 0).toFixed(2)}%</div>`,
           )
           .join('');
         return header + lines;
@@ -221,15 +255,23 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
           opacity: 0.7,
           borderRadius: [0, 0, 0, 0],
         },
-      },
-      {
-        name: '에러율 (선)',
-        type: 'line',
-        data: chartData.errorRate,
-        smooth: true,
-        symbol: 'none',
-        lineStyle: { width: 2, color: '#991b1b' },
-        itemStyle: { color: '#991b1b' },
+        markLine: {
+          symbol: 'none',
+          label: { show: false },
+          animationDuration: 0,
+          silent: true,
+          data: [
+            {
+              name: '평균',
+              yAxis: errorRateAverage,
+              lineStyle: {
+                type: 'dashed',
+                color: '#991b1b',
+                width: 2,
+              },
+            },
+          ],
+        },
       },
     ],
   };
@@ -241,6 +283,23 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
     p90: '#f59e0b', // 주황 (더 진한 주황)
     p50: '#10b981', // 초록 (에메랄드 그린)
   };
+
+  // 레이턴시 평균값 계산 (p95, p90, p50 각각)
+  const latencyAverages = useMemo(() => {
+    const calculateAverage = (data: number[][]) => {
+      const values = data.map((p: number[]) => p[1]);
+      const validValues = values.filter((v: number) => typeof v === 'number');
+      return validValues.length > 0
+        ? validValues.reduce((sum: number, v: number) => sum + v, 0) / validValues.length
+        : 0;
+    };
+
+    return {
+      p95: calculateAverage(chartData.latency.p95),
+      p90: calculateAverage(chartData.latency.p90),
+      p50: calculateAverage(chartData.latency.p50),
+    };
+  }, [chartData.latency]);
 
   const latencyOption = {
     ...baseStyle,
@@ -272,10 +331,9 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
           seriesName: string;
           value: number[];
         }
-        const list = params as TooltipParam[];
+        const list = Array.isArray(params) ? params : [params as TooltipParam];
         if (!list?.length) return '';
 
-        // axisValue가 timestamp인 경우 날짜/시간 형식으로 변환
         const timestamp =
           typeof list[0].axisValue === 'number'
             ? list[0].axisValue
@@ -296,7 +354,7 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
             (p) =>
               `<div style="margin:2px 0;"><span style="color:${p.color}">●</span> ${
                 p.seriesName
-              }: ${p.value[1].toFixed(2)} ms</div>`,
+              }: ${(p.value[1] ?? 0).toFixed(2)}ms</div>`,
           )
           .join('');
         return header + lines;
@@ -315,6 +373,23 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
         lineStyle: { width: 2, color: latencyColors.p95 },
         itemStyle: { color: latencyColors.p95 },
         emphasis: { focus: 'series' },
+        markLine: {
+          symbol: 'none',
+          label: { show: false },
+          animationDuration: 0,
+          silent: true,
+          data: [
+            {
+              name: 'p95 평균',
+              yAxis: latencyAverages.p95,
+              lineStyle: {
+                type: 'dashed',
+                color: 'rgba(220, 38, 38, 0.5)',
+                width: 2,
+              },
+            },
+          ],
+        },
       },
       {
         name: 'p90',
@@ -328,6 +403,23 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
         lineStyle: { width: 2, color: latencyColors.p90 },
         itemStyle: { color: latencyColors.p90 },
         emphasis: { focus: 'series' },
+        markLine: {
+          symbol: 'none',
+          label: { show: false },
+          animationDuration: 0,
+          silent: true,
+          data: [
+            {
+              name: 'p90 평균',
+              yAxis: latencyAverages.p90,
+              lineStyle: {
+                type: 'dashed',
+                color: 'rgba(245, 158, 11, 0.5)',
+                width: 2,
+              },
+            },
+          ],
+        },
       },
       {
         name: 'p50',
@@ -341,6 +433,23 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
         lineStyle: { width: 2, color: latencyColors.p50 },
         itemStyle: { color: latencyColors.p50 },
         emphasis: { focus: 'series' },
+        markLine: {
+          symbol: 'none',
+          label: { show: false },
+          animationDuration: 0,
+          silent: true,
+          data: [
+            {
+              name: 'p50 평균',
+              yAxis: latencyAverages.p50,
+              lineStyle: {
+                type: 'dashed',
+                color: 'rgba(16, 185, 129, 0.5)',
+                width: 2,
+              },
+            },
+          ],
+        },
       },
     ],
   };

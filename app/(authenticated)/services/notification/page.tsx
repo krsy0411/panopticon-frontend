@@ -109,10 +109,6 @@ export default function NotificationPage() {
     localStorage.removeItem(`notification_${type}`);
   };
 
-  const handleConfigure = (type: IntegrationType) => {
-    setActiveModal(type);
-  };
-
   const mergedIntegrations = integrationStatuses.map((integration) => ({
     ...integration,
     connected: connections[integration.type] ?? integration.connected,
@@ -237,9 +233,6 @@ export default function NotificationPage() {
         <section className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
           <div className="mb-4">
             <h3 className="text-lg font-bold text-gray-900">알림 채널 연동 상태</h3>
-            <p className="text-xs text-gray-500">
-              연결 여부, 연결된 SLO 개수, 테스트 메시지 결과를 채널별로 확인하세요.
-            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {mergedIntegrations.map((integration) => (
@@ -247,13 +240,8 @@ export default function NotificationPage() {
                 key={integration.type}
                 type={integration.type}
                 isConnected={integration.connected}
-                connectedSloCount={integration.connectedSloCount}
-                lastTestResult={integration.lastTestResult}
-                lastTestAt={integration.lastTestAt}
-                errorMessage={integration.errorMessage}
                 onConnect={() => handleConnect(integration.type)}
                 onDisconnect={() => handleDisconnect(integration.type)}
-                onConfigure={() => handleConfigure(integration.type)}
               />
             ))}
           </div>

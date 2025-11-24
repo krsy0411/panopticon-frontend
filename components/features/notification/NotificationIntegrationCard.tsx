@@ -48,45 +48,20 @@ const integrationConfig = {
   },
 };
 
-const initialNow = Date.now();
-
-const formatRelative = (value?: Date) => {
-  if (!value) return '';
-  const diff = initialNow - value.getTime();
-  const minutes = Math.max(1, Math.round(diff / 60000));
-
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-
-  return `${Math.round(hours / 24)}일 전`;
-};
-
 export interface NotificationIntegrationCardProps {
   type: IntegrationType;
   isConnected?: boolean;
-  connectedSloCount?: number;
-  lastTestResult?: 'success' | 'failure' | null;
-  lastTestAt?: Date;
-  errorMessage?: string;
   onConnect?: () => void;
   onDisconnect?: () => void;
-  onConfigure?: () => void;
 }
 
 export default function NotificationIntegrationCard({
   type,
   isConnected = false,
-  connectedSloCount = 0,
-  lastTestResult,
-  lastTestAt,
-  errorMessage,
   onConnect,
   onDisconnect,
-  onConfigure,
 }: NotificationIntegrationCardProps) {
   const connected = isConnected;
-  const relativeLastTest = formatRelative(lastTestAt);
 
   const config = integrationConfig[type];
 
@@ -97,8 +72,6 @@ export default function NotificationIntegrationCard({
       onConnect?.();
     }
   };
-
-  const handleConfigure = () => onConfigure?.();
 
   return (
     <div
@@ -136,45 +109,6 @@ export default function NotificationIntegrationCard({
 
       {/* 설명 */}
       <p className="text-xs text-gray-500 mt-1 mb-3">{config.description}</p>
-
-      {/* 상태 정보 */}
-      <div className="w-full text-left text-xs text-gray-700 space-y-1 mb-4">
-        <div className="flex items-center justify-between font-semibold">
-          <span>{connected ? '연결됨' : '연결 안됨'}</span>
-          <span>{connectedSloCount}개 SLO</span>
-        </div>
-
-        {/* 테스트 결과 */}
-        {lastTestResult && (
-          <div
-            className={`font-semibold ${
-              lastTestResult === 'success' ? 'text-green-600' : 'text-red-600'
-            }`}
-          >
-            테스트 메시지: {lastTestResult === 'success' ? '성공' : '실패'} (
-            {relativeLastTest || '방금 전'})
-          </div>
-        )}
-
-        {/* 오류 메시지 */}
-        {errorMessage && <div className="text-red-600">연동 오류 · {errorMessage}</div>}
-      </div>
-
-      {/* 설정 버튼 */}
-      {connected && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleConfigure();
-          }}
-          className="
-            w-full px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200
-            border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400
-          "
-        >
-          설정
-        </button>
-      )}
     </div>
   );
 }

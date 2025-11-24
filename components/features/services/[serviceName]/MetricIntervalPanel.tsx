@@ -357,13 +357,6 @@ export default function MetricIntervalPanel({
                         setIsLogGroupPanelOpen(true);
                       }}
                     />
-                    {isLogGroupPanelOpen && selectedLogGroup && (
-                      <LogGroupPanel
-                        isOpen={isLogGroupPanelOpen}
-                        group={selectedLogGroup as any}
-                        onClose={() => setIsLogGroupPanelOpen(false)}
-                      />
-                    )}
                   </StateHandler>
                 </div>
               </div>
@@ -385,6 +378,13 @@ export default function MetricIntervalPanel({
               }}
               serviceName={serviceName}
               endpointName={selectedEndpoint}
+            />
+          )}
+          {isLogGroupPanelOpen && selectedLogGroup && (
+            <LogGroupPanel
+              isOpen={isLogGroupPanelOpen}
+              group={selectedLogGroup as any}
+              onClose={() => setIsLogGroupPanelOpen(false)}
             />
           )}
         </>

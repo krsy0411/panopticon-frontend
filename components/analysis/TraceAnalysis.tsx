@@ -9,8 +9,8 @@ import SpanListView from './view/SpanListView';
 import MapView from './view/MapView';
 import WaterfallView from './view/WaterfallView';
 import FlameGraphView from './view/FlameGraphView';
-import SelectedSpanDetailsView from './view/SelectedSpanDetailsView';
 import SlideOverLayout from '@/components/ui/SlideOverLayout';
+import TraceAnalysisPullUpPanel from './TraceAnalysisPullUpPanel';
 
 /**
  * Trace Analysis Component : Slide-over Panel 방식(모달 X)
@@ -247,19 +247,19 @@ export default function TraceAnalysis({ isOpen, onClose, traceId }: TraceAnalysi
                   selectedSpanId={selectedSpanId}
                 />
               )}
-
-              {/* Selected Span Details */}
-              {selectedSpanId && data && (
-                <SelectedSpanDetailsView
-                  spanId={selectedSpanId}
-                  spans={data.spans}
-                  logs={data.logs}
-                  onClose={() => setSelectedSpanId(null)}
-                />
-              )}
             </div>
           </StateHandler>
         </div>
+
+        {/* Trace Analysis Pull Up Panel */}
+        {selectedSpanId && data && (
+          <TraceAnalysisPullUpPanel
+            spanId={selectedSpanId}
+            spans={data.spans}
+            logs={data.logs}
+            onClose={() => setSelectedSpanId(null)}
+          />
+        )}
       </SlideOverLayout>
     </>
   );

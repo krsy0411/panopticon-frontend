@@ -148,7 +148,7 @@ export default function EndpointTraceAnalysis({
 
   const widthClass = 'w-[70%]';
   const backdropClassName =
-    'fixed inset-0 bg-black/10 backdrop-blur-[2px] z-60 transition-opacity duration-300 opacity-100';
+    'fixed inset-0 min-h-screen bg-black/10 backdrop-blur-[2px] z-60 transition-opacity duration-300 opacity-100';
   const panelClassName =
     'fixed top-0 right-0 h-full bg-white shadow-2xl z-70 transform transition-transform duration-300 ease-in-out translate-x-0';
 

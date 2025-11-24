@@ -101,6 +101,13 @@ export default function OverviewCharts({
               }
             },
             click: (params: any) => {
+              // markLine 클릭 시 MetricIntervalPanel 활성화 안 함 (silent: true로 이벤트 자체 차단)
+              if (
+                params?.componentSubType === 'markLine' ||
+                !params?.value ||
+                (Array.isArray(params.value) && params.value.length < 2)
+              )
+                return;
               const ts =
                 (params?.value && (Array.isArray(params.value) ? params.value[0] : params.value)) ||
                 (params?.data && (Array.isArray(params.data) ? params.data[0] : params.data));
@@ -122,6 +129,13 @@ export default function OverviewCharts({
               }
             },
             click: (params: any) => {
+              // markLine 클릭 시 MetricIntervalPanel 활성화 안 함
+              if (
+                params?.componentSubType === 'markLine' ||
+                !params?.value ||
+                (Array.isArray(params.value) && params.value.length < 2)
+              )
+                return;
               const ts =
                 (params?.value && (Array.isArray(params.value) ? params.value[0] : params.value)) ||
                 (params?.data && (Array.isArray(params.data) ? params.data[0] : params.data));
@@ -143,6 +157,13 @@ export default function OverviewCharts({
               }
             },
             click: (params: any) => {
+              // markLine 클릭 시 MetricIntervalPanel 활성화 안 함
+              if (
+                params?.componentSubType === 'markLine' ||
+                !params?.value ||
+                (Array.isArray(params.value) && params.value.length < 2)
+              )
+                return;
               const ts =
                 (params?.value && (Array.isArray(params.value) ? params.value[0] : params.value)) ||
                 (params?.data && (Array.isArray(params.data) ? params.data[0] : params.data));
@@ -221,6 +242,13 @@ export default function OverviewCharts({
                       }
                     },
                     click: (params: any) => {
+                      // markLine 클릭 시 MetricIntervalPanel 활성화 안 함
+                      if (
+                        params?.componentSubType === 'markLine' ||
+                        !params?.value ||
+                        (Array.isArray(params.value) && params.value.length < 2)
+                      )
+                        return;
                       const ts =
                         (params?.value &&
                           (Array.isArray(params.value) ? params.value[0] : params.value)) ||
@@ -291,6 +319,13 @@ export default function OverviewCharts({
                       }
                     },
                     click: (params: any) => {
+                      // markLine 클릭 시 MetricIntervalPanel 활성화 안 함
+                      if (
+                        params?.componentSubType === 'markLine' ||
+                        !params?.value ||
+                        (Array.isArray(params.value) && params.value.length < 2)
+                      )
+                        return;
                       const ts =
                         (params?.value &&
                           (Array.isArray(params.value) ? params.value[0] : params.value)) ||
