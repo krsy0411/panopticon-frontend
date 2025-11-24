@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import NotificationIntegrationCard from '@/components/features/notification/NotificationIntegrationCard';
@@ -16,49 +17,44 @@ import DiscordConfigModal, {
 import TeamsConfigModal, {
   type TeamsConfig,
 } from '@/components/features/notification/modals/TeamsConfigModal';
-import { ServiceStatusBanner } from '@/components/features/notification/slo/ServiceStatusBanner';
-import { TimeRangeTabs } from '@/components/features/notification/slo/TimeRangeTabs';
 import { SloCard } from '@/components/features/notification/slo/SloCard';
 import { SloActionModal } from '@/components/features/notification/modals/SloActionModal';
-import { useNotificationMock } from '@/src/hooks/useNotificationMock';
 import SloCreateModal from '@/components/features/notification/modals/SloCreateModal';
+import { getWebhooks } from '@/src/api/webhook';
+import { createSlo, getSlos, deleteSlo, updateSlo } from '@/src/api/slo';
 import type {
   ComputedSlo,
   IntegrationType,
   SloCreateInput,
-  TimeRangeOption,
+  IntegrationStatus,
 } from '@/src/types/notification';
 
+interface WebhookConnection {
+  webhookId?: string;
+  lastTestAt?: string;
+  lastTestResult?: 'success' | 'failure';
+}
+
 interface ConnectionState {
-  [key: string]: boolean;
+  [key: string]: WebhookConnection;
 }
 
-// 알림 채널 연결 여부 로딩
-function loadConnectionsFromStorage(): ConnectionState {
-  if (typeof window === 'undefined') return {};
+/**
+ * SLO 상태 판정: 에러 허용치 사용률에 따라 결정
+ * - GOOD: 허용치 사용률 50% 이하 (남은 허용치 50% 이상)
+ * - WARNING: 허용치 사용률 50~90% (남은 허용치 10~50%)
+ * - FAILED: 허용치 사용률 90% 초과 (남은 허용치 10% 미만)
+ */
+const deriveStatus = (errorBudgetUsedRate: number) => {
+  const usedPercent = errorBudgetUsedRate * 100;
 
-  const types: IntegrationType[] = ['discord', 'slack', 'teams', 'email'];
-  const initial: ConnectionState = {};
-
-  // localStorage 값이 있으면 → 연결 true
-  types.forEach((t) => {
-    const v = localStorage.getItem(`notification_${t}`);
-    if (v) initial[t] = true;
-  });
-  return initial;
-}
-
-const deriveStatus = (usedRate: number) => {
-  const usedPercent = usedRate * 100;
-  if (usedPercent < 70) return 'GOOD' as const;
-  if (usedPercent < 100) return 'WARNING' as const;
+  if (usedPercent <= 50) return 'GOOD' as const;
+  if (usedPercent <= 90) return 'WARNING' as const;
   return 'FAILED' as const;
 };
 
 export default function NotificationPage() {
-  const [connections, setConnections] = useState<ConnectionState>(() =>
-    loadConnectionsFromStorage(),
-  );
+  const [connections, setConnections] = useState<ConnectionState>({});
   const [activeModal, setActiveModal] = useState<IntegrationType | null>(null);
   const [actionState, setActionState] = useState<{
     type: 'delete' | 'edit';
@@ -68,17 +64,71 @@ export default function NotificationPage() {
     target: null,
   });
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editingData, setEditingData] = useState<SloCreateInput | null>(null);
   const [userSlos, setUserSlos] = useState<SloCreateInput[]>([]);
-  const problemSectionRef = useRef<HTMLDivElement>(null);
+  const [integrationStatuses, setIntegrationStatusesState] = useState<IntegrationStatus[]>([
+    { type: 'slack', connected: false, connectedSloCount: 0, lastTestResult: null },
+    { type: 'email', connected: false, connectedSloCount: 0, lastTestResult: null },
+    { type: 'teams', connected: false, connectedSloCount: 0, lastTestResult: null },
+    { type: 'discord', connected: false, connectedSloCount: 0, lastTestResult: null },
+  ]);
 
-  const { timeRange, setTimeRange, timeRangeOptions, sloList, integrationStatuses, summary } =
-    useNotificationMock();
+  // authserver에서 웹훅 및 SLO 정보 불러오기 (페이지 마운트시 한 번 실행)
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // 웹훅 정보 불러오기
+        const webhooks = await getWebhooks();
+        const newConnections: ConnectionState = {};
 
-  // 현재 선택된 시간범위(1h/24h...)
-  const currentRange = useMemo(
-    () => timeRangeOptions.find((option) => option.key === timeRange) as TimeRangeOption,
-    [timeRange, timeRangeOptions],
-  );
+        webhooks.forEach((webhook) => {
+          const connection: WebhookConnection = {
+            webhookId: webhook.id,
+            lastTestAt: webhook.lastTestedAt,
+            lastTestResult: webhook.lastTestedAt ? 'success' : undefined,
+          };
+
+          if (webhook.type === 'slack') {
+            newConnections.slack = connection;
+          } else if (webhook.type === 'discord') {
+            newConnections.discord = connection;
+          } else if (webhook.type === 'teams') {
+            newConnections.teams = connection;
+          } else if (webhook.type === 'email') {
+            newConnections.email = connection;
+          }
+        });
+
+        setConnections(newConnections);
+      } catch (error) {
+        console.error('Failed to fetch webhooks:', error);
+      }
+
+      try {
+        // SLO 목록 불러오기
+        const sloList = await getSlos();
+        const sloInputs: SloCreateInput[] = sloList.map((slo) => ({
+          id: slo.id,
+          name: slo.name,
+          metric: slo.metric as 'availability' | 'latency' | 'error_rate',
+          target: slo.target,
+          sliValue: slo.sliValue,
+          actualDowntimeMinutes: slo.actualDowntimeMinutes,
+          totalMinutes: slo.totalMinutes,
+          connectedChannels: slo.connectedChannels as ('slack' | 'email' | 'teams' | 'discord')[],
+          tooltipTitle: '',
+          tooltipDescription: '',
+          description: slo.description,
+          timeRangeKey: '24h',
+        }));
+        setUserSlos(sloInputs);
+      } catch (error) {
+        console.error('Failed to fetch SLOs:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // ESC 누르면 모달 닫기
   useEffect(() => {
@@ -105,47 +155,49 @@ export default function NotificationPage() {
   };
 
   const handleDisconnect = (type: IntegrationType) => {
-    setConnections((prev) => ({ ...prev, [type]: false }));
-    localStorage.removeItem(`notification_${type}`);
+    setConnections((prev) => {
+      const { [type]: _, ...rest } = prev;
+      return rest;
+    });
   };
 
-  const handleConfigure = (type: IntegrationType) => {
-    setActiveModal(type);
-  };
-
-  const mergedIntegrations = integrationStatuses.map((integration) => ({
-    ...integration,
-    connected: connections[integration.type] ?? integration.connected,
-  }));
+  const mergedIntegrations = integrationStatuses.map((integration) => {
+    const connState = connections[integration.type];
+    return {
+      ...integration,
+      connected: !!connState?.webhookId,
+      lastTestResult: connState?.lastTestResult ?? integration.lastTestResult ?? null,
+      lastTestAt: connState?.lastTestAt ?? integration.lastTestAt,
+    };
+  });
 
   // 허용치 기반 SLO 상태 계산 로직
-  const computeSlo = useCallback(
-    (input: SloCreateInput): ComputedSlo => {
-      const totalMinutes = input.totalMinutes ?? currentRange.minutes;
-      const errorBudget = 1 - input.sliValue;
-      const allowedDowntime = totalMinutes * errorBudget;
-      const usedRate = allowedDowntime === 0 ? 0 : input.actualDowntimeMinutes / allowedDowntime;
-      return {
-        id: `custom-${input.id}`,
-        name: input.name,
-        metric: input.metric,
-        target: input.target,
-        sliValue: input.sliValue,
-        totalMinutes,
-        actualDowntimeMinutes: input.actualDowntimeMinutes,
-        allowedDowntimeMinutes: allowedDowntime,
-        errorBudgetUsedRate: usedRate,
-        errorBudgetRemainingPct: Math.max(0, (1 - usedRate) * 100),
-        errorBudgetOverPct: Math.max(0, usedRate * 100 - 100),
-        status: deriveStatus(usedRate),
-        tooltipTitle: input.tooltipTitle,
-        tooltipDescription: input.tooltipDescription,
-        connectedChannels: input.connectedChannels,
-        trend: [],
-      };
-    },
-    [currentRange.minutes],
-  );
+  const computeSlo = useCallback((input: SloCreateInput): ComputedSlo => {
+    // SLO 생성 시 지정된 totalMinutes 사용 (필수)
+    const totalMinutes = input.totalMinutes || 60 * 24; // 기본값: 24시간
+    const errorBudget = 1 - input.sliValue;
+    const allowedDowntime = totalMinutes * errorBudget;
+    const usedRate = allowedDowntime === 0 ? 0 : input.actualDowntimeMinutes / allowedDowntime;
+    return {
+      id: input.id,
+      name: input.name,
+      metric: input.metric,
+      target: input.target,
+      sliValue: input.sliValue,
+      totalMinutes,
+      actualDowntimeMinutes: input.actualDowntimeMinutes,
+      allowedDowntimeMinutes: allowedDowntime,
+      errorBudgetUsedRate: usedRate,
+      errorBudgetRemainingPct: Math.max(0, (1 - usedRate) * 100),
+      errorBudgetOverPct: Math.max(0, usedRate * 100 - 100),
+      status: deriveStatus(usedRate),
+      tooltipTitle: input.tooltipTitle,
+      tooltipDescription: input.tooltipDescription,
+      connectedChannels: input.connectedChannels,
+      description: input.description,
+      trend: [],
+    };
+  }, []);
 
   // 유저 생성 SLO 계산
   const computedUserSlos = useMemo(
@@ -153,70 +205,182 @@ export default function NotificationPage() {
     [userSlos, computeSlo],
   );
 
-  // 최종 SLO 리스트(기본 + 유저)
-  const displayedSlos = useMemo(
-    () => [...sloList, ...computedUserSlos],
-    [sloList, computedUserSlos],
-  );
+  // 최종 SLO 리스트 (유저가 생성한 SLO만 표시)
+  const displayedSlos = computedUserSlos;
 
   //   SLO 생성/삭제/수정 핸들러
   const handleSloEdit = (slo: ComputedSlo) => {
-    setActionState({ type: 'edit', target: slo });
+    // SLO 데이터를 SloCreateInput 형식으로 변환해서 edit 모달 열기
+    const sloInput: SloCreateInput = {
+      id: slo.id,
+      name: slo.name,
+      description: userSlos.find((s) => s.id === slo.id)?.description,
+      metric: slo.metric,
+      target: slo.target,
+      sliValue: slo.sliValue,
+      totalMinutes: slo.totalMinutes,
+      actualDowntimeMinutes: slo.actualDowntimeMinutes,
+      tooltipTitle: slo.tooltipTitle,
+      tooltipDescription: slo.tooltipDescription,
+      connectedChannels: slo.connectedChannels,
+      timeRangeKey: userSlos.find((s) => s.id === slo.id)?.timeRangeKey || '24h',
+    };
+    setEditingData(sloInput);
+    setCreateModalOpen(true);
   };
 
   const handleSloDelete = (slo: ComputedSlo) => {
     setActionState({ type: 'delete', target: slo });
   };
 
-  const handleCreateSlo = (input: SloCreateInput) => {
-    setUserSlos((prev) => [...prev, input]);
-    setCreateModalOpen(false);
-    toast.success('SLO가 생성되었습니다.');
+  const handleCreateSlo = async (input: SloCreateInput) => {
+    const isEditMode = editingData !== null;
+
+    try {
+      if (isEditMode) {
+        // SLO 수정 요청
+        const updatedSlo = await updateSlo(input.id, {
+          name: input.name,
+          metric: input.metric,
+          target: input.target,
+          totalMinutes: input.totalMinutes,
+          connectedChannels: input.connectedChannels,
+          description: input.description,
+        });
+
+        // 로컬 상태 업데이트
+        setUserSlos((prev) =>
+          prev.map((slo) =>
+            slo.id === input.id
+              ? {
+                  ...slo,
+                  name: updatedSlo.name,
+                  metric: updatedSlo.metric as 'availability' | 'latency' | 'error_rate',
+                  target: updatedSlo.target,
+                  totalMinutes: updatedSlo.totalMinutes,
+                  connectedChannels: updatedSlo.connectedChannels as (
+                    | 'slack'
+                    | 'email'
+                    | 'teams'
+                    | 'discord'
+                  )[],
+                  description: updatedSlo.description,
+                }
+              : slo,
+          ),
+        );
+
+        setCreateModalOpen(false);
+        setEditingData(null);
+        toast.success('SLO가 수정되었습니다.');
+      } else {
+        // SLO 생성 요청
+        const createdSlo = await createSlo({
+          name: input.name,
+          metric: input.metric,
+          target: input.target,
+          sliValue: input.sliValue ?? 0,
+          actualDowntimeMinutes: input.actualDowntimeMinutes ?? 0,
+          totalMinutes: input.totalMinutes ?? 1440,
+          connectedChannels: input.connectedChannels,
+          description: input.description,
+        });
+
+        // 로컬 상태에 추가
+        const newInput: SloCreateInput = {
+          id: createdSlo.id,
+          name: createdSlo.name,
+          metric: createdSlo.metric as 'availability' | 'latency' | 'error_rate',
+          target: createdSlo.target,
+          sliValue: createdSlo.sliValue,
+          actualDowntimeMinutes: createdSlo.actualDowntimeMinutes,
+          totalMinutes: createdSlo.totalMinutes,
+          connectedChannels: createdSlo.connectedChannels as (
+            | 'slack'
+            | 'email'
+            | 'teams'
+            | 'discord'
+          )[],
+          tooltipTitle: '',
+          tooltipDescription: '',
+          description: createdSlo.description,
+          timeRangeKey: '24h',
+        };
+
+        setUserSlos((prev) => [...prev, newInput]);
+        setCreateModalOpen(false);
+        toast.success('SLO가 생성되었습니다.');
+      }
+    } catch (error) {
+      console.error('Failed to create/update SLO:', error);
+      toast.error(isEditMode ? 'SLO 수정에 실패했습니다.' : 'SLO 생성에 실패했습니다.');
+    }
   };
 
-  const handleActionConfirm = (slo: ComputedSlo) => {
-    if (actionState.type === 'delete') {
-      toast.warn(`${slo.name} SLO가 삭제되었습니다.`);
-    } else {
-      toast.success(`${slo.name} 목표값을 수정했습니다.`);
+  const handleActionConfirm = async (slo: ComputedSlo) => {
+    try {
+      if (actionState.type === 'delete') {
+        // API에 SLO 삭제 요청
+        await deleteSlo(slo.id);
+        setUserSlos((prev) => prev.filter((s) => s.id !== slo.id));
+        toast.success(`${slo.name} SLO가 삭제되었습니다.`);
+      } else {
+        toast.success(`${slo.name} 목표값을 수정했습니다.`);
+      }
+    } catch (error) {
+      console.error('Failed to delete SLO:', error);
+      toast.error('SLO 삭제에 실패했습니다.');
     }
     setActionState((prev) => ({ ...prev, target: null }));
   };
 
-  // 문제 SLO 위치로 스크롤 이동
-  const scrollToProblems = () => {
-    problemSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // 각 알림 채널 저장(localStorage)
+  // 각 알림 채널 저장
   const handleSlackSave = (config: SlackConfig) => {
-    localStorage.setItem('notification_slack', JSON.stringify(config));
-    localStorage.setItem('panopticon_slack_webhook_url', config.webhookUrl);
-    localStorage.setItem('panopticon_slack_enabled', 'true');
-    setConnections((prev) => ({ ...prev, slack: true }));
+    setConnections((prev) => ({
+      ...prev,
+      slack: {
+        webhookId: config.webhookId,
+        lastTestResult: config.lastTestResult,
+        lastTestAt: config.lastTestAt,
+      },
+    }));
     setActiveModal(null);
-    toast.success('Slack 연동이 완료되었습니다.');
   };
 
   const handleEmailSave = (config: EmailConfig) => {
-    localStorage.setItem('notification_email', JSON.stringify(config));
-    setConnections((prev) => ({ ...prev, email: true }));
+    setConnections((prev) => ({
+      ...prev,
+      email: {
+        webhookId: config.webhookId,
+        lastTestResult: config.lastTestResult,
+        lastTestAt: config.lastTestAt,
+      },
+    }));
     setActiveModal(null);
-    toast.success('Email 연동이 완료되었습니다.');
   };
 
   const handleDiscordSave = (config: DiscordConfig) => {
-    localStorage.setItem('notification_discord', JSON.stringify(config));
-    setConnections((prev) => ({ ...prev, discord: true }));
+    setConnections((prev) => ({
+      ...prev,
+      discord: {
+        webhookId: config.webhookId,
+        lastTestResult: config.lastTestResult,
+        lastTestAt: config.lastTestAt,
+      },
+    }));
     setActiveModal(null);
-    toast.success('Discord 연동이 완료되었습니다.');
   };
 
   const handleTeamsSave = (config: TeamsConfig) => {
-    localStorage.setItem('notification_teams', JSON.stringify(config));
-    setConnections((prev) => ({ ...prev, teams: true }));
+    setConnections((prev) => ({
+      ...prev,
+      teams: {
+        webhookId: config.webhookId,
+        lastTestResult: config.lastTestResult,
+        lastTestAt: config.lastTestAt,
+      },
+    }));
     setActiveModal(null);
-    toast.success('Teams 연동이 완료되었습니다.');
   };
 
   return (
@@ -230,63 +394,79 @@ export default function NotificationPage() {
           </p>
         </header>
 
-        {/* 서비스 종합 상태 요약 배너 */}
-        <ServiceStatusBanner summary={summary} onClick={scrollToProblems} />
-
         {/* 알림 채널 섹션 */}
         <section className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
           <div className="mb-4">
             <h3 className="text-lg font-bold text-gray-900">알림 채널 연동 상태</h3>
-            <p className="text-xs text-gray-500">
-              연결 여부, 연결된 SLO 개수, 테스트 메시지 결과를 채널별로 확인하세요.
-            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {mergedIntegrations.map((integration) => (
               <NotificationIntegrationCard
                 key={integration.type}
-                type={integration.type}
+                {...integration}
                 isConnected={integration.connected}
-                connectedSloCount={integration.connectedSloCount}
-                lastTestResult={integration.lastTestResult}
-                lastTestAt={integration.lastTestAt}
-                errorMessage={integration.errorMessage}
                 onConnect={() => handleConnect(integration.type)}
                 onDisconnect={() => handleDisconnect(integration.type)}
-                onConfigure={() => handleConfigure(integration.type)}
               />
             ))}
           </div>
         </section>
 
-        {/* SLO 상태 */}
+        {/* SLO 목록 */}
         <section className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
-          <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">SLO 상태</h2>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                <p className="text-xs text-gray-500">
-                  시간 범위에 따라 SLI(지표), 허용치, 상태 배지가 재계산됩니다.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setCreateModalOpen(true)}
-                  className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  + SLO 생성
-                </button>
-              </div>
+              <h2 className="text-lg font-bold text-gray-900">SLO 목록</h2>
+              <p className="text-sm text-gray-500 mt-2">
+                서비스의 SLO(Service Level Objective)를 관리하고 모니터링하세요.
+              </p>
             </div>
-            {/* 시간 범위 필터 */}
-            <TimeRangeTabs options={timeRangeOptions} value={timeRange} onChange={setTimeRange} />
+            {/* 우측 상단: 생성 버튼 */}
+            <button
+              type="button"
+              onClick={() => setCreateModalOpen(true)}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all whitespace-nowrap"
+            >
+              + SLO 생성
+            </button>
           </div>
 
           {/* SLO 카드 리스트 */}
-          <div className="space-y-4" ref={problemSectionRef}>
-            {displayedSlos.map((slo) => (
-              <SloCard key={slo.id} slo={slo} onEdit={handleSloEdit} onDelete={handleSloDelete} />
-            ))}
-          </div>
+          {displayedSlos.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="text-center">
+                <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                  <svg
+                    className="w-7 h-7 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-gray-500 text-sm">생성된 SLO가 없습니다.</p>
+                <button
+                  type="button"
+                  onClick={() => setCreateModalOpen(true)}
+                  className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-all"
+                >
+                  첫 SLO 생성하기
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {displayedSlos.map((slo) => (
+                <SloCard key={slo.id} slo={slo} onEdit={handleSloEdit} onDelete={handleSloDelete} />
+              ))}
+            </div>
+          )}
         </section>
       </div>
 
@@ -321,12 +501,16 @@ export default function NotificationPage() {
         onSave={handleTeamsSave}
       />
 
-      {/* SLO 생성 모달 */}
+      {/* SLO 생성/수정 모달 */}
       <SloCreateModal
         open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        defaultMinutes={currentRange.minutes}
+        onClose={() => {
+          setCreateModalOpen(false);
+          setEditingData(null);
+        }}
+        defaultMinutes={60 * 24} // 기본값: 24시간
         onSubmit={handleCreateSlo}
+        editingData={editingData}
       />
 
       {/* toast 메시지 */}

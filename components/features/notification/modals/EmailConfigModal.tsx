@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { toast } from 'react-toastify';
+import { createWebhook, testWebhook as testWebhookApi } from '@/src/api/webhook';
+import type { WebhookConfig } from '@/src/api/webhook';
 
 export interface EmailConfigModalProps {
   isOpen: boolean;
@@ -12,50 +14,117 @@ export interface EmailConfigModalProps {
 export interface EmailConfig {
   recipientEmail: string;
   senderName?: string;
+  webhookId?: string;
+  lastTestResult?: 'success' | 'failure';
+  lastTestAt?: string;
 }
 
 export default function EmailConfigModal({ isOpen, onClose, onSave }: EmailConfigModalProps) {
-  const [recipientEmail, setRecipientEmail] = useState(() => {
-    try {
-      if (typeof window === 'undefined') return '';
-      const raw = localStorage.getItem('notification_email');
-      if (!raw) return '';
-      const parsed = JSON.parse(raw);
-      return parsed?.recipientEmail || '';
-    } catch {
-      return '';
-    }
-  });
-
-  const [senderName, setSenderName] = useState(() => {
-    try {
-      if (typeof window === 'undefined') return 'Panopticon Alert';
-      const raw = localStorage.getItem('notification_email');
-      if (!raw) return 'Panopticon Alert';
-      const parsed = JSON.parse(raw);
-      return parsed?.senderName || 'Panopticon Alert';
-    } catch {
-      return 'Panopticon Alert';
-    }
-  });
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [smtpHost, setSmtpHost] = useState('');
+  const [smtpPort, setSmtpPort] = useState(587);
+  const [smtpUser, setSmtpUser] = useState('');
+  const [smtpPassword, setSmtpPassword] = useState('');
+  const [smtpTls, setSmtpTls] = useState(true);
+  const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [webhookConfig, setWebhookConfig] = useState<WebhookConfig | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
+  const handleTest = async () => {
     if (!recipientEmail) {
       toast.error('수신 이메일 주소를 입력해주세요.');
       return;
     }
 
-    // 이메일 형식 검증
+    if (!smtpHost || !smtpUser || !smtpPassword) {
+      toast.error('SMTP 설정을 완료해주세요.');
+      return;
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(recipientEmail)) {
       toast.error('올바른 이메일 주소를 입력해주세요.');
       return;
     }
 
-    onSave({ recipientEmail, senderName });
-    onClose();
+    setIsTesting(true);
+    try {
+      const config = await createWebhook({
+        type: 'email',
+        name: 'Email Notification',
+        webhookUrl: recipientEmail,
+        smtpHost,
+        smtpPort,
+        smtpUser,
+        smtpPassword,
+        smtpTls,
+      });
+      setWebhookConfig(config);
+
+      const result = await testWebhookApi(config.id);
+      if (result.success) {
+        toast.success('테스트 메시지가 전송되었습니다!');
+        onSave({
+          recipientEmail,
+          webhookId: config.id,
+          lastTestResult: 'success',
+          lastTestAt: new Date().toISOString(),
+        });
+      } else {
+        toast.error(`테스트 실패: ${result.message}`);
+      }
+    } catch (error) {
+      toast.error('테스트 실패: ' + String(error));
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!recipientEmail) {
+      toast.error('수신 이메일 주소를 입력해주세요.');
+      return;
+    }
+
+    if (!smtpHost || !smtpUser || !smtpPassword) {
+      toast.error('SMTP 설정을 완료해주세요.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(recipientEmail)) {
+      toast.error('올바른 이메일 주소를 입력해주세요.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const config = await createWebhook({
+        type: 'email',
+        name: 'Email Notification',
+        webhookUrl: recipientEmail,
+        smtpHost,
+        smtpPort,
+        smtpUser,
+        smtpPassword,
+        smtpTls,
+      });
+      setWebhookConfig(config);
+      onSave({
+        recipientEmail,
+        webhookId: config.id,
+        lastTestResult: webhookConfig?.lastTestedAt ? 'success' : undefined,
+        lastTestAt: webhookConfig?.lastTestedAt,
+      });
+      onClose();
+      toast.success('Email이 성공적으로 연동되었습니다!');
+    } catch (error) {
+      toast.error('저장 실패: ' + String(error));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -68,7 +137,7 @@ export default function EmailConfigModal({ isOpen, onClose, onSave }: EmailConfi
         </div>
 
         {/* 바디 */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
           {/* 수신 이메일 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -81,47 +150,110 @@ export default function EmailConfigModal({ isOpen, onClose, onSave }: EmailConfi
               placeholder="your-email@example.com"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              SLO 위반 시 이 주소로 알림 이메일이 전송됩니다
-            </p>
           </div>
 
-          {/* 발신자 이름 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              발신자 이름 (선택)
-            </label>
-            <input
-              type="text"
-              value={senderName}
-              onChange={(e) => setSenderName(e.target.value)}
-              placeholder="Panopticon Alert"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
+          {/* SMTP 설정 */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">SMTP 설정</h3>
+
+            <div className="space-y-3">
+              {/* SMTP Host */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SMTP 호스트 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={smtpHost}
+                  onChange={(e) => setSmtpHost(e.target.value)}
+                  placeholder="smtp.gmail.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              {/* SMTP Port */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SMTP 포트 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  value={smtpPort}
+                  onChange={(e) => setSmtpPort(Number(e.target.value))}
+                  placeholder="587"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              {/* SMTP User */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SMTP 사용자명 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={smtpUser}
+                  onChange={(e) => setSmtpUser(e.target.value)}
+                  placeholder="your-email@gmail.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              {/* SMTP Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SMTP 비밀번호 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={smtpPassword}
+                  onChange={(e) => setSmtpPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              {/* SMTP TLS */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="smtpTls"
+                  checked={smtpTls}
+                  onChange={(e) => setSmtpTls(e.target.checked)}
+                  className="w-4 h-4 text-green-600 rounded"
+                />
+                <label htmlFor="smtpTls" className="ml-2 text-sm text-gray-700">
+                  TLS 사용
+                </label>
+              </div>
+            </div>
           </div>
 
-          {/* 안내 */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-xs text-blue-800">
-              💡 이메일 알림은 백엔드 서버를 통해 전송됩니다. 실제 알림을 받으려면 SMTP 설정이
-              필요합니다.
-            </p>
-          </div>
+          {/* 테스트 버튼 */}
+          <button
+            onClick={handleTest}
+            disabled={isTesting || isSaving || !recipientEmail || !smtpHost}
+            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isTesting ? '전송 중...' : '테스트 메시지 전송'}
+          </button>
         </div>
 
         {/* 푸터 */}
         <div className="p-6 border-t border-gray-200 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            disabled={isSaving || isTesting}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             취소
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            disabled={isSaving || isTesting || !recipientEmail || !smtpHost}
+            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            저장
+            {isSaving ? '저장 중...' : '저장'}
           </button>
         </div>
       </div>

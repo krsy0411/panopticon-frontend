@@ -67,7 +67,7 @@ export default function AgentSelectionPage() {
   };
 
   return (
-    <div className="bg-gray-50">
+    <div className="bg-gray-50 h-full">
       {/* 헤더 */}
       <div className="border-b border-gray-200 bg-white">
         <div className="mx-auto max-w-7xl px-6 py-8">

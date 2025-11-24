@@ -20,7 +20,7 @@ export default function SlideOverLayout({
   onClose,
   widthClass = 'w-[80%]',
   children,
-  backdropClassName = 'fixed inset-0 bg-black/10 backdrop-blur-[2px] z-40 transition-opacity duration-300 opacity-100',
+  backdropClassName = 'fixed inset-0 min-h-screen bg-black/10 backdrop-blur-[2px] z-40 transition-opacity duration-300 opacity-100',
   panelClassName = 'fixed top-0 right-0 h-full bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out translate-x-0',
   enableEsc = true,
 }: Props) {
@@ -57,7 +57,7 @@ export default function SlideOverLayout({
 
   return (
     <>
-      <div className={backdropClassName} onClick={onClose} />
+      <div className={backdropClassName} style={{ bottom: '0px' }} onClick={onClose} />
       <div className={`${panelClassName} ${widthClass}`}>{children}</div>
     </>
   );

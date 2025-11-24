@@ -15,19 +15,39 @@ interface LogsSectionProps {
   serviceName: string;
 }
 
+// Traceback에서 Exception 타입 추출
+function extractExceptionType(msg: string): string | null {
+  // 마지막 예외 라인 찾기 (예: "httpcore.ConnectTimeout: ...")
+  const match = msg.match(/(\w+(?:Error|Timeout|Exception))\s*(?::|\n|$)/i);
+  return match?.[1] || null;
+}
+
+// 간단한 메시지 정규화(그룹화 기준과 동일하게 유지)
+function normalizeMessage(msg: string): string {
+  // Traceback인 경우 Exception 타입으로 정규화
+  if (msg.includes('Traceback') || msg.includes('File "')) {
+    const exceptionType = extractExceptionType(msg);
+    if (exceptionType) {
+      return `traceback ${exceptionType}`.toLowerCase();
+    }
+  }
+
+  // 콜론(:)이 있으면 콜론 앞부분만 추출
+  const beforeColon = msg.split(':')[0].trim();
+  const baseMessage = beforeColon || msg;
+
+  return baseMessage
+    .toLowerCase()
+    .replace(/0x[a-f0-9]+/gi, ' ')
+    .replace(/\d+/g, ' ')
+    .replace(/[^a-z0-9\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
+
 export default function LogsSection({ serviceName }: LogsSectionProps) {
   // level은 태그에서 선택되면 그 값을 사용하고, 없으면 기본 ERROR 사용
-
-  // 간단한 메시지 정규화(그룹화 기준과 동일하게 유지)
-  const normalizeMessage = (msg: string) =>
-    msg
-      .toLowerCase()
-      .replace(/0x[a-f0-9]+/gi, ' ')
-      .replace(/\d+/g, ' ')
-      .replace(/[^a-z0-9\s]/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 120);
 
   const [page, setPage] = useState(1);
 
@@ -204,7 +224,6 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
           isOpen={isLogGroupPanelOpen}
           group={selectedLogGroup}
           onClose={() => setIsLogGroupPanelOpen(false)}
-          widthClass="w-[60%]"
         />
       )}
     </div>

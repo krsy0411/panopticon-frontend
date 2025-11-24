@@ -50,7 +50,8 @@ export function useAuth() {
     queryKey: ['auth', 'me'],
     queryFn: fetchCurrentUser,
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5분
+    staleTime: 0, // 항상 fresh 데이터 가져오기
+    gcTime: 0, // 캐시 보관 안 함
   });
 
   const logoutMutation = useMutation({

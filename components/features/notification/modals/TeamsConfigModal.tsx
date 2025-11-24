@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { toast } from 'react-toastify';
+import { createWebhook, testWebhook as testWebhookApi } from '@/src/api/webhook';
+import type { WebhookConfig } from '@/src/api/webhook';
 
 export interface TeamsConfigModalProps {
   isOpen: boolean;
@@ -11,31 +13,80 @@ export interface TeamsConfigModalProps {
 
 export interface TeamsConfig {
   webhookUrl: string;
+  webhookId?: string;
+  lastTestResult?: 'success' | 'failure';
+  lastTestAt?: string;
 }
 
 export default function TeamsConfigModal({ isOpen, onClose, onSave }: TeamsConfigModalProps) {
-  const [webhookUrl, setWebhookUrl] = useState(() => {
-    try {
-      if (typeof window === 'undefined') return '';
-      const raw = localStorage.getItem('notification_teams');
-      if (!raw) return '';
-      const parsed = JSON.parse(raw);
-      return parsed?.webhookUrl || '';
-    } catch {
-      return '';
-    }
-  });
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [webhookConfig, setWebhookConfig] = useState<WebhookConfig | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
+  const handleTest = async () => {
     if (!webhookUrl) {
       toast.error('웹훅 URL을 입력해주세요.');
       return;
     }
 
-    onSave({ webhookUrl });
-    onClose();
+    setIsTesting(true);
+    try {
+      const config = await createWebhook({
+        type: 'teams',
+        name: 'Teams Notification',
+        webhookUrl,
+      });
+      setWebhookConfig(config);
+
+      const result = await testWebhookApi(config.id);
+      if (result.success) {
+        toast.success('테스트 메시지가 전송되었습니다!');
+        onSave({
+          webhookUrl,
+          webhookId: config.id,
+          lastTestResult: 'success',
+          lastTestAt: new Date().toISOString(),
+        });
+      } else {
+        toast.error(`테스트 실패: ${result.message}`);
+      }
+    } catch (error) {
+      toast.error('테스트 실패: ' + String(error));
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!webhookUrl) {
+      toast.error('웹훅 URL을 입력해주세요.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const config = await createWebhook({
+        type: 'teams',
+        name: 'Teams Notification',
+        webhookUrl,
+      });
+      setWebhookConfig(config);
+      onSave({
+        webhookUrl,
+        webhookId: config.id,
+        lastTestResult: webhookConfig?.lastTestedAt ? 'success' : undefined,
+        lastTestAt: webhookConfig?.lastTestedAt,
+      });
+      onClose();
+      toast.success('Teams가 성공적으로 연동되었습니다!');
+    } catch (error) {
+      toast.error('저장 실패: ' + String(error));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -59,20 +110,31 @@ export default function TeamsConfigModal({ isOpen, onClose, onSave }: TeamsConfi
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
+
+          {/* 테스트 버튼 */}
+          <button
+            onClick={handleTest}
+            disabled={isTesting || isSaving || !webhookUrl}
+            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isTesting ? '전송 중...' : '테스트 메시지 전송'}
+          </button>
         </div>
 
         <div className="p-6 border-t border-gray-200 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            disabled={isSaving || isTesting}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             취소
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            disabled={isSaving || isTesting || !webhookUrl}
+            className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            저장
+            {isSaving ? '저장 중...' : '저장'}
           </button>
         </div>
       </div>
