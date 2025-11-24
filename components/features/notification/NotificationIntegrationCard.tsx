@@ -4,7 +4,7 @@
 import { FaDiscord, FaSlack } from 'react-icons/fa';
 import { BsMicrosoftTeams } from 'react-icons/bs';
 import { MdEmail } from 'react-icons/md';
-import type { IntegrationType } from '@/src/types/notification';
+import type { IntegrationStatus } from '@/src/types/notification';
 
 /* -------------------------------------------------------
    채널별 UI 스타일 config
@@ -48,8 +48,8 @@ const integrationConfig = {
   },
 };
 
-export interface NotificationIntegrationCardProps {
-  type: IntegrationType;
+export interface NotificationIntegrationCardProps
+  extends Omit<IntegrationStatus, 'connectedSloCount'> {
   isConnected?: boolean;
   onConnect?: () => void;
   onDisconnect?: () => void;
@@ -58,6 +58,8 @@ export interface NotificationIntegrationCardProps {
 export default function NotificationIntegrationCard({
   type,
   isConnected = false,
+  lastTestResult,
+  lastTestAt,
   onConnect,
   onDisconnect,
 }: NotificationIntegrationCardProps) {
@@ -109,6 +111,30 @@ export default function NotificationIntegrationCard({
 
       {/* 설명 */}
       <p className="text-xs text-gray-500 mt-1 mb-3">{config.description}</p>
+
+      {/* 테스트 결과 */}
+      {connected && lastTestResult !== null && lastTestResult !== undefined && (
+        <div className="w-full mt-2 pt-2 border-t border-gray-200">
+          {lastTestResult === 'success' ? (
+            <div className="flex items-center justify-center gap-1 text-xs text-green-700">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              테스트 성공
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-1 text-xs text-red-700">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500"></span>
+              테스트 실패
+            </div>
+          )}
+          {lastTestAt && (
+            <p className="text-xs text-gray-400 mt-1">
+              {typeof lastTestAt === 'string'
+                ? new Date(lastTestAt).toLocaleDateString('ko-KR')
+                : lastTestAt.toLocaleDateString('ko-KR')}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

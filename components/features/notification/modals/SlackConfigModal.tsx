@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { toast } from 'react-toastify';
+import { createWebhook, testWebhook as testWebhookApi } from '@/src/api/webhook';
+import type { WebhookConfig } from '@/src/api/webhook';
 
 export interface SlackConfigModalProps {
   isOpen: boolean;
@@ -11,22 +13,16 @@ export interface SlackConfigModalProps {
 
 export interface SlackConfig {
   webhookUrl: string;
+  webhookId?: string;
+  lastTestResult?: 'success' | 'failure';
+  lastTestAt?: string;
 }
 
 export default function SlackConfigModal({ isOpen, onClose, onSave }: SlackConfigModalProps) {
-  const [webhookUrl, setWebhookUrl] = useState(() => {
-    try {
-      if (typeof window === 'undefined') return '';
-      const raw = localStorage.getItem('notification_slack');
-      if (!raw) return '';
-      const parsed = JSON.parse(raw);
-      return parsed?.webhookUrl || '';
-    } catch {
-      return '';
-    }
-  });
-
+  const [webhookUrl, setWebhookUrl] = useState('');
   const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [webhookConfig, setWebhookConfig] = useState<WebhookConfig | null>(null);
 
   if (!isOpen) return null;
 
@@ -36,29 +32,34 @@ export default function SlackConfigModal({ isOpen, onClose, onSave }: SlackConfi
       return;
     }
 
+    if (!webhookUrl.startsWith('https://hooks.slack.com/services/')) {
+      toast.error('올바른 Slack 웹훅 URL을 입력해주세요. (https://hooks.slack.com/services/...)');
+      return;
+    }
+
     setIsTesting(true);
     try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: '✅ Slack 연동 테스트 성공!',
-          blocks: [
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: '*Panopticon 알림 테스트*\n슬랙 연동이 성공적으로 완료되었습니다!',
-              },
-            },
-          ],
-        }),
+      // 먼저 authserver에 저장
+      const config = await createWebhook({
+        type: 'slack',
+        name: 'Slack Notification',
+        webhookUrl,
       });
+      setWebhookConfig(config);
 
-      if (response.ok) {
+      // 테스트 실행
+      const result = await testWebhookApi(config.id);
+      if (result.success) {
         toast.success('테스트 메시지가 전송되었습니다!');
+        // onSave를 호출하여 테스트 성공 상태를 parent에 전달
+        onSave({
+          webhookUrl,
+          webhookId: config.id,
+          lastTestResult: 'success',
+          lastTestAt: new Date().toISOString(),
+        });
       } else {
-        toast.error('테스트 실패: 웹훅 URL을 확인해주세요.');
+        toast.error(`테스트 실패: ${result.message}`);
       }
     } catch (error) {
       toast.error('테스트 실패: ' + String(error));
@@ -67,19 +68,38 @@ export default function SlackConfigModal({ isOpen, onClose, onSave }: SlackConfi
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!webhookUrl) {
       toast.error('웹훅 URL을 입력해주세요.');
       return;
     }
 
-    if (!webhookUrl.startsWith('https://hooks.slack.com/')) {
-      toast.error('올바른 Slack 웹훅 URL을 입력해주세요.');
+    if (!webhookUrl.startsWith('https://hooks.slack.com/services/')) {
+      toast.error('올바른 Slack 웹훅 URL을 입력해주세요. (https://hooks.slack.com/services/...)');
       return;
     }
 
-    onSave({ webhookUrl });
-    onClose();
+    setIsSaving(true);
+    try {
+      const config = await createWebhook({
+        type: 'slack',
+        name: 'Slack Notification',
+        webhookUrl,
+      });
+      setWebhookConfig(config);
+      onSave({
+        webhookUrl,
+        webhookId: config.id,
+        lastTestResult: webhookConfig?.lastTestedAt ? 'success' : undefined,
+        lastTestAt: webhookConfig?.lastTestedAt,
+      });
+      onClose();
+      toast.success('Slack이 성공적으로 연동되었습니다!');
+    } catch (error) {
+      toast.error('저장 실패: ' + String(error));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -122,7 +142,7 @@ export default function SlackConfigModal({ isOpen, onClose, onSave }: SlackConfi
           {/* 테스트 버튼 */}
           <button
             onClick={handleTest}
-            disabled={isTesting}
+            disabled={isTesting || isSaving || !webhookUrl}
             className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isTesting ? '전송 중...' : '테스트 메시지 전송'}
@@ -133,15 +153,17 @@ export default function SlackConfigModal({ isOpen, onClose, onSave }: SlackConfi
         <div className="p-6 border-t border-gray-200 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            disabled={isSaving || isTesting}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             취소
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+            disabled={isSaving || isTesting || !webhookUrl}
+            className="flex-1 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            저장
+            {isSaving ? '저장 중...' : '저장'}
           </button>
         </div>
       </div>

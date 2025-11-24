@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { toast } from 'react-toastify';
+import { createWebhook, testWebhook as testWebhookApi } from '@/src/api/webhook';
+import type { WebhookConfig } from '@/src/api/webhook';
+
 export interface DiscordConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -11,74 +14,21 @@ export interface DiscordConfigModalProps {
 export interface DiscordConfig {
   webhookUrl: string;
   username?: string;
+  webhookId?: string;
+  lastTestResult?: 'success' | 'failure';
+  lastTestAt?: string;
 }
 
 export default function DiscordConfigModal({ isOpen, onClose, onSave }: DiscordConfigModalProps) {
-  const [webhookUrl, setWebhookUrl] = useState(() => {
-    try {
-      if (typeof window === 'undefined') return '';
-      const raw = localStorage.getItem('notification_discord');
-      if (!raw) return '';
-      const parsed = JSON.parse(raw);
-      return parsed?.webhookUrl || '';
-    } catch {
-      return '';
-    }
-  });
-
-  const [username, setUsername] = useState(() => {
-    try {
-      if (typeof window === 'undefined') return 'Panopticon';
-      const raw = localStorage.getItem('notification_discord');
-      if (!raw) return 'Panopticon';
-      const parsed = JSON.parse(raw);
-      return parsed?.username || 'Panopticon';
-    } catch {
-      return 'Panopticon';
-    }
-  });
-
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [username, setUsername] = useState('Panopticon');
   const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [webhookConfig, setWebhookConfig] = useState<WebhookConfig | null>(null);
 
   if (!isOpen) return null;
 
   const handleTest = async () => {
-    if (!webhookUrl) {
-      toast.error('웹훅 URL을 입력해주세요.');
-      return;
-    }
-
-    setIsTesting(true);
-    try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: username || 'Panopticon',
-          embeds: [
-            {
-              title: '✅ Discord 연동 테스트 성공!',
-              description: 'Panopticon 알림이 성공적으로 설정되었습니다.',
-              color: 5814783, // 파란색
-              timestamp: new Date().toISOString(),
-            },
-          ],
-        }),
-      });
-
-      if (response.ok || response.status === 204) {
-        toast.success('테스트 메시지가 전송되었습니다!');
-      } else {
-        toast.error('테스트 실패: 웹훅 URL을 확인해주세요.');
-      }
-    } catch (error) {
-      toast.error('테스트 실패: ' + String(error));
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
-  const handleSave = () => {
     if (!webhookUrl) {
       toast.error('웹훅 URL을 입력해주세요.');
       return;
@@ -89,8 +39,68 @@ export default function DiscordConfigModal({ isOpen, onClose, onSave }: DiscordC
       return;
     }
 
-    onSave({ webhookUrl, username });
-    onClose();
+    setIsTesting(true);
+    try {
+      const config = await createWebhook({
+        type: 'discord',
+        name: 'Discord Notification',
+        webhookUrl,
+      });
+      setWebhookConfig(config);
+
+      const result = await testWebhookApi(config.id);
+      if (result.success) {
+        toast.success('테스트 메시지가 전송되었습니다!');
+        onSave({
+          webhookUrl,
+          username,
+          webhookId: config.id,
+          lastTestResult: 'success',
+          lastTestAt: new Date().toISOString(),
+        });
+      } else {
+        toast.error(`테스트 실패: ${result.message}`);
+      }
+    } catch (error) {
+      toast.error('테스트 실패: ' + String(error));
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!webhookUrl) {
+      toast.error('웹훅 URL을 입력해주세요.');
+      return;
+    }
+
+    if (!webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
+      toast.error('올바른 Discord 웹훅 URL을 입력해주세요.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const config = await createWebhook({
+        type: 'discord',
+        name: 'Discord Notification',
+        webhookUrl,
+      });
+      setWebhookConfig(config);
+      onSave({
+        webhookUrl,
+        username,
+        webhookId: config.id,
+        lastTestResult: webhookConfig?.lastTestedAt ? 'success' : undefined,
+        lastTestAt: webhookConfig?.lastTestedAt,
+      });
+      onClose();
+      toast.success('Discord가 성공적으로 연동되었습니다!');
+    } catch (error) {
+      toast.error('저장 실패: ' + String(error));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -140,8 +150,8 @@ export default function DiscordConfigModal({ isOpen, onClose, onSave }: DiscordC
 
           <button
             onClick={handleTest}
-            disabled={isTesting}
-            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+            disabled={isTesting || isSaving || !webhookUrl}
+            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isTesting ? '전송 중...' : '테스트 메시지 전송'}
           </button>
@@ -150,15 +160,17 @@ export default function DiscordConfigModal({ isOpen, onClose, onSave }: DiscordC
         <div className="p-6 border-t border-gray-200 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            disabled={isSaving || isTesting}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             취소
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            disabled={isSaving || isTesting || !webhookUrl}
+            className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            저장
+            {isSaving ? '저장 중...' : '저장'}
           </button>
         </div>
       </div>

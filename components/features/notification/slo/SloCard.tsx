@@ -2,7 +2,6 @@
 
 import type { ComputedSlo } from '@/src/types/notification';
 import type { ReactElement } from 'react';
-import { InfoTooltip } from './InfoTooltip';
 import { StatusBadge } from './StatusBadge';
 import { useState } from 'react';
 
@@ -80,6 +79,30 @@ export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: Slo
 
   const [active, setActive] = useState(enabled);
 
+  // 메트릭 타입에 따른 포맷팅 함수
+  const isLatency = slo.metric === 'latency';
+  const isPercentageMetric = slo.metric === 'availability' || slo.metric === 'error_rate';
+
+  // SLI 값 포맷팅 (availability/error_rate는 %로, latency는 ms로)
+  const formatSliValue = (value: number): string => {
+    if (isPercentageMetric) {
+      return `${(value * 100).toFixed(2)}%`;
+    } else if (isLatency) {
+      return `${value.toFixed(0)}ms`;
+    }
+    return `${value.toFixed(2)}`;
+  };
+
+  // 목표값 포맷팅
+  const formatTargetValue = (value: number): string => {
+    if (isPercentageMetric) {
+      return `${Math.round(value * 10000) / 100}%`;
+    } else if (isLatency) {
+      return `${Math.round(value)}ms`;
+    }
+    return `${value.toFixed(2)}`;
+  };
+
   const handleToggle = () => {
     const next = !active;
     setActive(next);
@@ -97,13 +120,15 @@ export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: Slo
       {/* 상단: 아이콘 + 제목 + tooltip + 상태 + 액션 + 토글 */}
       <div className="flex items-start justify-between w-full">
         {/* 왼쪽: 아이콘 + 제목 */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1">
           {/* 아이콘 */}
           {metricIcons[slo.metric]}
 
-          <div className="flex items-center gap-2">
-            <h3 className="text-xl font-semibold text-gray-900">{slo.name}</h3>
-            <InfoTooltip title={slo.tooltipTitle} description={slo.tooltipDescription} />
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-semibold text-gray-900">{slo.name}</h3>
+            </div>
+            {slo.description && <p className="mt-1 text-sm text-gray-600">{slo.description}</p>}
           </div>
         </div>
 
@@ -151,11 +176,9 @@ export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: Slo
             <div className="rounded-xl border border-gray-100 bg-gray-50 px-5 py-4">
               <div className="text-xs text-gray-500">SLI(지표)</div>
               <div className="mt-1 text-3xl font-bold text-gray-900">
-                {(slo.sliValue * 100).toFixed(2)}%
+                {formatSliValue(slo.sliValue)}
               </div>
-              <div className="mt-1 text-xs text-gray-500">
-                목표 {Math.round(slo.target * 10000) / 100}%
-              </div>
+              <div className="mt-1 text-xs text-gray-500">목표 {formatTargetValue(slo.target)}</div>
             </div>
 
             <div className="rounded-xl border border-gray-100 bg-gray-50 px-5 py-4">

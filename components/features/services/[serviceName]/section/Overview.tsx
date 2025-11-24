@@ -7,12 +7,16 @@ import { getServiceMetrics } from '@/src/api/apm';
 import { POLLING_INTERVAL, useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { convertTimeRangeToParams, getChartXAxisRange } from '@/src/utils/timeRange';
 import { getTimeAxisFormatter, getBarMaxWidthForTimeAxis } from '@/src/utils/chartFormatter';
+import { useSloMetricsMonitoring } from '@/src/hooks/useSloMetricsMonitoring';
 
 interface OverviewSectionProps {
   serviceName: string;
 }
 
 export default function OverviewSection({ serviceName }: OverviewSectionProps) {
+  // SLO 메트릭 모니터링 초기화 (3초 주기 폴링)
+  useSloMetricsMonitoring(serviceName);
+
   // Chart selection and layout moved to `OverviewCharts` component
   // Zustand store에서 시간 정보 가져오기 (timeRange만 사용)
   const { timeRange, interval } = useTimeRangeStore();

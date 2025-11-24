@@ -89,7 +89,7 @@ export default function ServicesPage() {
   };
 
   return (
-    <div className="bg-gray-50 p-8 space-y-6">
+    <div className="bg-gray-50 p-8 space-y-6 h-full">
       <section className="flex flex-col gap-6 lg:flex-row">
         {/* 좌측 사이드바 */}
         <aside className="w-full lg:w-56 shrink-0 space-y-4 lg:sticky lg:top-6 lg:self-start lg:z-10">

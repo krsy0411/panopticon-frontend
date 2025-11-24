@@ -39,6 +39,7 @@ export interface ComputedSlo extends BaseSloRecord {
   errorBudgetUsedRate: number;
   errorBudgetRemainingPct: number;
   errorBudgetOverPct: number;
+  description?: string;
 }
 
 export interface IntegrationStatus {
@@ -46,7 +47,7 @@ export interface IntegrationStatus {
   connected: boolean;
   connectedSloCount: number;
   lastTestResult: 'success' | 'failure' | null;
-  lastTestAt?: Date;
+  lastTestAt?: Date | string;
   errorMessage?: string;
 }
 
@@ -61,6 +62,7 @@ export interface NotificationSummary {
 export interface SloCreateInput {
   id: string;
   name: string;
+  description?: string;
   metric: SloMetric;
   target: number;
   sliValue: number;
