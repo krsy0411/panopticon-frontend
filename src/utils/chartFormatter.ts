@@ -8,203 +8,132 @@
 /**
  * interval 값에 따라 차트 x축 라벨 포맷팅
  * @param date - Date 객체
- * @param interval - API interval 값 (예: "10s", "30s", "1m", "5m", "10m", "1h", "2d")
+ * @param interval - API interval 값 (예: "20s", "30s", "45s", "1m", "3m", "7m", "9m", "12m", "25m", "2h", "3h", "4h", "12h")
  * @returns 포맷팅된 라벨 문자열
  */
 export function formatChartTimeLabel(date: Date, interval: string): string {
   const hour = date.getHours().toString().padStart(2, '0');
   const minute = date.getMinutes().toString().padStart(2, '0');
   const second = date.getSeconds().toString().padStart(2, '0');
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
 
-  // 초 단위 간격 (10초, 30초, 45초): 시:분:초 표시
-  if (['10s', '30s', '45s'].includes(interval)) {
+  // 초 단위 간격 (20초, 30초, 45초): 시:분:초 표시
+  if (['20s', '30s', '45s'].includes(interval)) {
     return `${hour}:${minute}:${second}`;
   }
   // 매우 짧은 간격 (1분~3분): 시:분 표시
-  else if (['1m', '2m', '3m'].includes(interval)) {
+  else if (['1m', '3m'].includes(interval)) {
     return `${hour}:${minute}`;
   }
-  // 짧은 간격 (5분~30분): 시:분 표시
-  else if (['5m', '10m', '20m', '30m'].includes(interval)) {
+  // 짧은 간격 (7분~25분): 시:분 표시
+  else if (['7m', '9m', '12m', '25m'].includes(interval)) {
     return `${hour}:${minute}`;
   }
-  // 중간 간격 (1시간~12시간): 시간만 표시
-  else if (['1h', '2h', '6h', '12h'].includes(interval)) {
+  // 중간 간격 (2시간~12시간): 시간만 표시
+  else if (['2h', '3h', '4h', '12h'].includes(interval)) {
     return `${hour}h`;
   }
-  // 긴 간격 (1일~2일): 월/일만 표시
-  else if (['1d', '2d'].includes(interval)) {
-    return `${month}/${day}`;
-  }
-  // 매우 긴 간격: 월/일만 표시
+  // 긴 간격 (1일 이상): 월/일 HH:mm 표시
   else {
-    return `${month}/${day}`;
+    return `${month}/${day} ${hour}:${minute}`;
   }
 }
 
 /**
- * interval 값에 따라 x축 라벨 표시 간격 계산
- * @param interval - API interval 값 (예: "10s", "30s", "1m", "5m", "10m", "1h", "2d")
- * @param dataLength - 데이터 포인트 개수
- * @returns x축 라벨 표시 간격 (0 = 모두 표시, 'auto' = 자동)
+ * interval 값에 따라 x축 라벨 표시 간격 계산 (일정한 간격)
+ * interval 값에 기반하여 고정된 간격을 반환하여 일관성 있는 라벨 배치
+ * @param interval - API interval 값 (예: "20s", "30s", "45s", "1m", "3m", "7m", "9m", "12m", "25m", "2h", "3h", "4h", "12h")
+ * @returns x축 라벨 표시 간격 (0 = 모두 표시, 숫자 = 해당 간격)
  */
-export function getXAxisInterval(interval: string, dataLength: number): number | 'auto' {
-  // 데이터가 적으면 모두 표시
-  if (dataLength <= 6) return 0;
-  if (dataLength <= 10) return 1;
-
-  // interval에 따른 간격 조절
+export function getXAxisInterval(interval: string): number {
+  // interval에 따른 고정 간격 설정 (interval 자체를 기반으로 일정한 간격 보장)
   switch (interval) {
-    case '10s':
+    case '20s':
+      return 3; // 20초 × 3 = 60초 (1분마다 라벨)
     case '30s':
-      return Math.floor(dataLength / 12); // ~12개 라벨 (초 단위는 많이 표시)
+      return 2; // 30초 × 2 = 60초 (1분마다 라벨)
+    case '45s':
+      return 2; // 45초 × 2 = 90초 (약 1.5분마다 라벨)
     case '1m':
-    case '2m':
+      return 5; // 1분 × 5 = 5분마다 라벨
     case '3m':
-      return Math.floor(dataLength / 10); // ~10개 라벨
-    case '5m':
-    case '10m':
-      return Math.floor(dataLength / 8); // ~8개 라벨
-    case '30m':
-    case '1h':
-    case '2m':
-      return Math.floor(dataLength / 6); // ~6개 라벨
-    case '5m':
-    case '6h':
+      return 5; // 3분 × 5 = 15분마다 라벨
+    case '7m':
+      return 3; // 7분 × 3 = 21분마다 라벨
+    case '9m':
+      return 3; // 9분 × 3 = 27분마다 라벨
+    case '12m':
+      return 3; // 12분 × 3 = 36분마다 라벨
+    case '25m':
+      return 2; // 25분 × 2 = 50분마다 라벨
+    case '2h':
+      return 2; // 2시간 × 2 = 4시간마다 라벨
+    case '3h':
+      return 2; // 3시간 × 2 = 6시간마다 라벨
+    case '4h':
+      return 2; // 4시간 × 2 = 8시간마다 라벨
     case '12h':
-      return Math.floor(dataLength / 4); // ~4개 라벨
-    case '1d':
-    case '2d':
-      return Math.floor(dataLength / 3); // ~3개 라벨
+      return 2; // 12시간 × 2 = 24시간(1일)마다 라벨
     default:
-      return 'auto';
+      return 1; // 기본값
   }
 }
 
 /**
  * interval 값에 따라 bar width를 동적으로 계산
  * 기간이 길수록 bar가 더 얇아짐
- * @param interval - API interval 값 (예: "10s", "30s", "1m", "5m", "10m", "1h", "2d")
+ * @param interval - API interval 값 (예: "20s", "30s", "45s", "1m", "3m", "7m", "9m", "12m", "25m", "2h", "3h", "4h", "12h")
  * @returns bar width (픽셀 또는 비율)
  */
 export function getBarWidth(interval: string): number | string {
   const barWidthMap: Record<string, number | string> = {
+    '20s': '75%', // 초 단위: 매우 굵음
+    '30s': '72%',
+    '45s': '70%',
     '1m': '70%', // 매우 짧은 간격: 매우 굵음
-    '2m': '65%',
-    '3m': '60%',
-    '5m': '60%', // 짧은 간격: 굵음
-    '10m': '55%',
-    '30m': '50%',
-    '1h': '45%',
-    '2h': '40%',
-    '12h': '35%',
-    '1d': '30%', // 긴 간격: 얇음
-    '2d': '25%',
+    '3m': '62%', // 짧은 간격: 굵음
+    '7m': '58%',
+    '9m': '56%',
+    '12m': '55%',
+    '25m': '50%',
+    '2h': '42%',
+    '3h': '40%',
+    '4h': '38%',
+    '12h': '35%', // 긴 간격: 얇음
   };
 
   return barWidthMap[interval] || '35%'; // 기본값
 }
 
 /**
- * Resources 컴포넌트용 bar width 계산 (더 큰 폭)
- * 차트 크기가 작으므로 더 굵은 bar를 사용
- * @param interval - API interval 값 (예: "10s", "30s", "1m", "5m", "10m", "1h", "2d")
- * @returns bar width (픽셀 또는 비율)
- */
-export function getBarWidthForResources(interval: string): number | string {
-  const barWidthMap: Record<string, number | string> = {
-    '10s': '85%', // 초 단위: 매우 굵음
-    '30s': '80%',
-    '1m': '80%', // 매우 짧은 간격: 매우 굵음
-    '2m': '75%',
-    '3m': '70%',
-    '5m': '70%', // 짧은 간격: 굵음 (Resources는 차트 크기가 작으므로 더 큼)
-    '10m': '65%',
-    '30m': '60%',
-    '1h': '55%',
-    '2h': '50%',
-    '6h': '50%',
-    '12h': '45%',
-    '1d': '40%', // 긴 간격: 얇음
-    '2d': '35%',
-  };
-
-  return barWidthMap[interval] || '50%'; // 기본값
-}
-
-/**
- * Resources 컴포넌트용 x축 간격 계산
- * 차트 크기가 작으므로 더 큰 간격 사용
- * @param interval - API interval 값 (예: "10s", "30s", "1m", "5m", "10m", "1h", "2d")
- * @param dataLength - 데이터 포인트 개수
- * @returns x축 라벨 표시 간격 (0 = 모두 표시, 'auto' = 자동)
- */
-export function getXAxisIntervalForResources(
-  interval: string,
-  dataLength: number,
-): number | 'auto' {
-  // 데이터가 적으면 모두 표시
-  if (dataLength <= 6) return 0;
-  if (dataLength <= 10) return 1;
-
-  // interval에 따른 간격 조절 (Resources 차트는 좁으므로 더 큰 간격)
-  switch (interval) {
-    case '10s':
-    case '30s':
-      return Math.floor(dataLength / 10); // ~10개 라벨 (초 단위)
-    case '1m':
-    case '2m':
-    case '3m':
-      return Math.floor(dataLength / 8); // ~8개 라벨
-    case '5m':
-    case '10m':
-      return Math.floor(dataLength / 6); // ~6개 라벨
-    case '30m':
-    case '1h':
-    case '2m':
-      return Math.floor(dataLength / 5); // ~5개 라벨
-    case '5m':
-    case '6h':
-    case '12h':
-      return Math.floor(dataLength / 4); // ~4개 라벨
-    case '1d':
-    case '2d':
-      return Math.floor(dataLength / 3); // ~3개 라벨
-    default:
-      return 'auto';
-  }
-}
-
-/**
  * interval 값에 따라 ECharts 시간 축 포맷 문자열 반환
- * @param interval - API interval 값 (예: "10s", "30s", "1m", "5m", "10m", "1h", "2d")
- * @returns ECharts formatter 문자열 (예: "{HH}:{mm}:{ss}", "{MM}/{dd}")
+ * @param interval - API interval 값 (예: "20s", "30s", "45s", "1m", "3m", "7m", "9m", "12m", "25m", "2h", "3h", "4h", "12h")
+ * @returns ECharts formatter 문자열 (예: "{HH}:{mm}:{ss}", "{MM}/{dd} {HH}:{mm}")
  */
 export function getTimeAxisFormatter(interval: string): string {
   // 초 단위 간격: 시:분:초
-  if (['10s', '30s', '45s'].includes(interval)) {
+  if (['20s', '30s', '45s'].includes(interval)) {
     return '{HH}:{mm}:{ss}';
   }
-  // 짧은 간격 (1분~30분): 시:분
-  else if (['1m', '2m', '3m', '5m', '10m', '20m', '30m'].includes(interval)) {
+  // 짧은 간격 (1분~25분): 시:분
+  else if (['1m', '3m', '7m', '9m', '12m', '25m'].includes(interval)) {
     return '{HH}:{mm}';
   }
-  // 중간 간격 (1시간~12시간): 시간만
-  else if (['1h', '2h', '6h', '12h'].includes(interval)) {
+  // 중간 간격 (2시간~12시간): 시간만
+  else if (['2h', '3h', '4h', '12h'].includes(interval)) {
     return '{HH}h';
   }
-  // 긴 간격 (1일 이상): 월/일
+  // 긴 간격 (1일 이상): 월/일 HH:mm
   else {
-    return '{MM}/{dd}';
+    return '{MM}/{dd} {HH}:{mm}';
   }
 }
 
 /**
  * interval 값에 따라 시간 기반 X축의 bar 최대 폭 반환
  * 짧은 간격일수록 넓고, 긴 간격일수록 좁음
- * @param interval - API interval 값 (예: "45s", "1m", "3m", "10m", "1h", "1d")
+ * @param interval - API interval 값 (예: "20s", "30s", "45s", "1m", "3m", "7m", "9m", "12m", "25m", "2h", "3h", "4h", "12h")
  * @returns bar 최대 폭 (픽셀)
  */
 export function getBarMaxWidthForTimeAxis(interval: string): number {
@@ -215,10 +144,12 @@ export function getBarMaxWidthForTimeAxis(interval: string): number {
     '1m': 25, // 1분: 넓음 (60개 포인트)
     '3m': 23, // 3분: 넓음 (60개 포인트)
     '7m': 22, // 7분: 중간 (51개 포인트)
+    '9m': 21, // 9분: 중간 (60개 포인트)
     '12m': 21, // 12분: 중간 (60개 포인트)
     '25m': 20, // 25분: 중간 (57개 포인트)
     '2h': 19, // 2시간: 좁음 (약 70개 포인트)
     '3h': 18, // 3시간: 더 좁음 (약 56개 포인트)
+    '4h': 17, // 4시간: 더 좁음 (약 42개 포인트)
     '12h': 16, // 12시간: 더 좁음 (60개 포인트)
   };
 
