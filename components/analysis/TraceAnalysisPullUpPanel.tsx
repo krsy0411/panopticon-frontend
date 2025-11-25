@@ -71,9 +71,22 @@ export default function TraceAnalysisPullUpPanel({
     return spans.find((span) => span.span_id === spanId);
   }, [spans, spanId]);
 
-  // 선택된 트레이스와 관련된 로그 필터링
+  // 선택된 트레이스와 관련된 로그 필터링 및 정렬
   const relatedLogs = useMemo(() => {
-    return logs.filter((log) => log.trace_id === traceId);
+    const logLevelOrder: Record<string, number> = {
+      ERROR: 0,
+      WARN: 1,
+      INFO: 2,
+      DEBUG: 3,
+    };
+
+    return logs
+      .filter((log) => log.trace_id === traceId)
+      .sort((a, b) => {
+        const levelDiff = (logLevelOrder[a.level] ?? 999) - (logLevelOrder[b.level] ?? 999);
+        if (levelDiff !== 0) return levelDiff;
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      });
   }, [logs, traceId]);
 
   if (!selectedSpan) {
