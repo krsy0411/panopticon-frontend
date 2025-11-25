@@ -19,6 +19,7 @@ interface Props {
   onBarClick?: (endpointName: string) => void;
   colors?: string[];
   allItems?: EndpointItem[]; // 평균 계산용 전체 데이터
+  hideXAxisLabel?: boolean; // x축 라벨 숨김 여부
 }
 
 export default function EndpointBarChart({
@@ -28,6 +29,7 @@ export default function EndpointBarChart({
   onBarClick,
   colors,
   allItems,
+  hideXAxisLabel = true,
 }: Props) {
   const option = useMemo(() => {
     if (!items?.length) return null;
@@ -93,12 +95,24 @@ export default function EndpointBarChart({
     return {
       backgroundColor: 'transparent',
 
+      legend: {
+        show: true,
+        bottom: 10,
+        left: 'center',
+        orient: 'horizontal',
+        textStyle: {
+          color: '#374151',
+          fontSize: 11,
+        },
+        data: items.map((i) => i.endpoint_name),
+      },
+
       tooltip: {
         trigger: 'item',
         backgroundColor: 'rgba(0,0,0,0.8)',
         borderColor: 'transparent',
-        textStyle: { color: '#f9fafb', fontSize: 12 },
-        padding: 10,
+        textStyle: { color: '#f9fafb', fontSize: 32 },
+        padding: 12,
 
         // 호버: 선택된 엔드포인트 정보 또는 평균선 정보 표시
         formatter: (params: { name?: string; dataIndex?: number }) => {
@@ -118,8 +132,8 @@ export default function EndpointBarChart({
             })();
 
             return `
-              <div style="font-weight:700;margin-bottom:6px;font-size:14px;">평균</div>
-              <div>${metricLabel}: ${metricValue}</div>
+              <div style="font-weight:700;margin-bottom:6px;font-size:24px;">평균</div>
+              <div style="font-size:22px;">${metricLabel}: ${metricValue}</div>
             `;
           }
 
@@ -150,12 +164,13 @@ export default function EndpointBarChart({
               : `${sharePercent.toFixed(2)}%`;
 
           const errorRateText = errorRate !== null ? `${errorRate.toFixed(2)}%` : '-';
+          const barColor = values[idx]?.itemStyle.color ?? '#fff';
 
           return `
-            <div style="font-weight:700;margin-bottom:6px;font-size:14px;">${name}</div>
-            <div>${mainMetricLabel}: ${mainMetricValue}</div>
-            <div>지연시간(P95): ${p95.toFixed(2)} ms</div>
-            <div>에러율: ${errorRateText}</div>
+            <div style="font-weight:700;margin-bottom:6px;font-size:24px;line-height:1.2;color:${barColor};">${name}</div>
+            <div style="line-height:1.2;font-size:20px;">${mainMetricLabel}: ${mainMetricValue}</div>
+            <div style="line-height:1.2;font-size:20px;">지연시간(P95): ${p95.toFixed(2)} ms</div>
+            <div style="line-height:1.2;font-size:20px;">에러율: ${errorRateText}</div>
           `;
         },
       },
@@ -171,6 +186,7 @@ export default function EndpointBarChart({
           color: '#374151',
           fontSize: 9,
           margin: 12,
+          show: !hideXAxisLabel,
         },
         axisTick: {
           alignWithLabel: true,
@@ -191,40 +207,31 @@ export default function EndpointBarChart({
       },
 
       // 막대 그래프 렌더링
-      series: [
-        {
-          type: 'bar',
-          barWidth: '45%',
-          data: values,
-          label: {
-            show: true,
-            position: 'top',
-            formatter: (p: { value: number }) => {
-              if (selectedMetric === 'error_rate') return `${p.value.toFixed(2)}%`;
-              if (selectedMetric === 'latency') return `${p.value} ms`;
-              return Number(p.value).toLocaleString();
-            },
-          },
-          itemStyle: { borderRadius: [4, 4, 0, 0] },
-          markLine: {
-            symbol: 'none',
-            label: { show: false },
-            data: [
-              {
-                name: '평균',
-                yAxis: averageValue,
-                lineStyle: {
-                  type: 'dashed',
-                  color: 'rgba(100, 100, 100, 0.7)',
-                  width: 2,
-                },
-              },
-            ],
+      series: values.map((val, idx) => ({
+        type: 'bar',
+        name: val.name,
+        barWidth: '40%',
+        barGap: '-150%',
+        data: Array(items.length)
+          .fill(null)
+          .map((_, i) => (i === idx ? val.value : null)),
+        label: {
+          show: true,
+          position: 'top',
+          formatter: (p: { value: number | null }) => {
+            if (p.value === null) return '';
+            if (selectedMetric === 'error_rate') return `${p.value.toFixed(2)}%`;
+            if (selectedMetric === 'latency') return `${p.value} ms`;
+            return Number(p.value).toLocaleString();
           },
         },
-      ],
+        itemStyle: {
+          color: val.itemStyle.color,
+          borderRadius: [4, 4, 0, 0],
+        },
+      })),
     };
-  }, [items, selectedMetric, colors, allItems]);
+  }, [items, selectedMetric, colors, allItems, hideXAxisLabel]);
 
   // 클릭 이벤트 전달 (평균선 클릭 무시)
   const events = {

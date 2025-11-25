@@ -90,8 +90,9 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
       trigger: 'axis',
       backgroundColor: 'rgba(0,0,0,0.7)',
       borderColor: 'transparent',
-      textStyle: { color: '#f9fafb', fontSize: 12 },
-      padding: 6,
+      textStyle: { color: '#f9fafb', fontSize: 32 },
+      padding: 12,
+      borderRadius: 8,
     },
     xAxis: {
       type: 'time',
@@ -144,8 +145,44 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
       trigger: 'axis',
       backgroundColor: 'rgba(0,0,0,0.7)',
       borderColor: 'transparent',
-      textStyle: { color: '#f9fafb', fontSize: 12 },
-      padding: 6,
+      textStyle: { color: '#f9fafb', fontSize: 32 },
+      padding: 12,
+      borderRadius: 8,
+      formatter: (params: unknown) => {
+        interface TooltipParam {
+          axisValue: string | number;
+          color: string;
+          seriesName: string;
+          value: number[];
+        }
+        const list = Array.isArray(params) ? params : [params as TooltipParam];
+        if (!list?.length) return '';
+
+        const timestamp =
+          typeof list[0].axisValue === 'number'
+            ? list[0].axisValue
+            : new Date(list[0].axisValue).getTime();
+        const date = new Date(timestamp);
+        const formattedDate = date.toLocaleString('ko-KR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+
+        const header = `<div style="margin-bottom:6px;font-size:24px;line-height:1.2;"><b>${formattedDate}</b></div>`;
+        const lines = list
+          .map(
+            (p) =>
+              `<div style="line-height:1.2;font-size:20px;"><span style="color:${
+                p.color
+              }">●</span> ${p.seriesName}: ${Math.round(p.value[1] ?? 0)}</div>`,
+          )
+          .join('');
+        return header + lines;
+      },
     },
     series: [
       {
@@ -200,8 +237,9 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
       trigger: 'axis',
       backgroundColor: 'rgba(0,0,0,0.7)',
       borderColor: 'transparent',
-      textStyle: { color: '#f9fafb', fontSize: 12 },
-      padding: 6,
+      textStyle: { color: '#f9fafb', fontSize: 32 },
+      padding: 12,
+      borderRadius: 8,
       formatter: (params: unknown) => {
         interface TooltipParam {
           axisValue: string | number;
@@ -226,13 +264,13 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
           second: '2-digit',
         });
 
-        const header = `<div style="margin-bottom:4px;"><b>${formattedDate}</b></div>`;
+        const header = `<div style="margin-bottom:6px;font-size:24px;line-height:1.2;"><b>${formattedDate}</b></div>`;
         const lines = list
           .map(
             (p) =>
-              `<div style="margin:2px 0;"><span style="color:${p.color}">●</span> ${
-                p.seriesName
-              }: ${(p.value[1] ?? 0).toFixed(2)}%</div>`,
+              `<div style="line-height:1.2;font-size:20px;"><span style="color:${
+                p.color
+              }">●</span> ${p.seriesName}: ${(p.value[1] ?? 0).toFixed(2)}%</div>`,
           )
           .join('');
         return header + lines;
@@ -326,8 +364,9 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
       trigger: 'axis',
       backgroundColor: 'rgba(0,0,0,0.7)',
       borderColor: 'transparent',
-      textStyle: { color: '#f9fafb', fontSize: 12 },
-      padding: 6,
+      textStyle: { color: '#f9fafb', fontSize: 32 },
+      padding: 12,
+      borderRadius: 8,
       formatter: (params: unknown) => {
         interface TooltipParam {
           axisValue: string | number;
@@ -352,13 +391,13 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
           second: '2-digit',
         });
 
-        const header = `<div style="margin-bottom:4px;"><b>${formattedDate}</b></div>`;
+        const header = `<div style="margin-bottom:6px;font-size:24px;line-height:1.2;"><b>${formattedDate}</b></div>`;
         const lines = list
           .map(
             (p) =>
-              `<div style="margin:2px 0;"><span style="color:${p.color}">●</span> ${
-                p.seriesName
-              }: ${(p.value[1] ?? 0).toFixed(2)}ms</div>`,
+              `<div style="line-height:1.2;font-size:20px;"><span style="color:${
+                p.color
+              }">●</span> ${p.seriesName}: ${(p.value[1] ?? 0).toFixed(2)}ms</div>`,
           )
           .join('');
         return header + lines;

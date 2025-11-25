@@ -59,7 +59,7 @@ export default function PullUpPanelLayout({
         className={`h-2 cursor-ns-resize transition-all flex items-center justify-center group ${
           isDragging
             ? 'bg-linear-to-r from-blue-500 via-blue-600 to-blue-500'
-            : 'bg-white border-t border-gray-200'
+            : 'bg-gray-50 border-t border-gray-50'
         }`}
         onMouseDown={handleMouseDown}
       ></div>

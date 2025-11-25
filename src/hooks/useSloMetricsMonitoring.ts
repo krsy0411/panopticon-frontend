@@ -18,6 +18,7 @@ interface SloData {
   metric: 'latency' | 'error_rate' | 'availability';
   target: number;
   sliValue: number;
+  actualDowntimeMinutes: number;
   connectedChannels: string[];
 }
 
@@ -32,9 +33,10 @@ interface MonitoringState {
 
 /**
  * SLO 메트릭 모니터링 훅
- * - 서비스 메트릭을 3초마다 폴링
- * - SLI 값 계산 및 상태 변화 감지
- * - GOOD → FAILED 전환 시 알림 발송
+ * - 서비스 메트릭을 1분마다 폴링
+ * - SLI 값 및 actualDowntimeMinutes 계산
+ * - updateSlo API를 통해 authserver에 갱신
+ * - 상태 변화 감지 및 알림 발송
  */
 export function useSloMetricsMonitoring(serviceName: string) {
   const [monitoringState, setMonitoringState] = useState<Record<string, MonitoringState>>({});
@@ -56,11 +58,11 @@ export function useSloMetricsMonitoring(serviceName: string) {
     gcTime: 5 * 60 * 1000,
   });
 
-  // 서비스 메트릭 폴링 (3초 주기)
+  // 서비스 메트릭 폴링 (1분 주기)
   const { data: metrics } = useQuery({
     queryKey: ['serviceMetrics', serviceName],
     queryFn: () => getServiceMetrics(serviceName),
-    refetchInterval: 3000, // 3초마다 폴링
+    refetchInterval: 60000, // 1분(60초)마다 폴링
     refetchIntervalInBackground: true,
     staleTime: 0,
   });
@@ -163,14 +165,25 @@ export function useSloMetricsMonitoring(serviceName: string) {
           // SLI 값 계산
           const newSliValue = calculateSliFromMetric(slo.metric, metricValue, slo.target);
 
+          // actualDowntimeMinutes 계산
+          // SLI가 목표 미만이면 1분 추가 (폴링 주기 = 1분)
+          const actualDowntimeMinutes =
+            newSliValue < slo.target ? slo.actualDowntimeMinutes + 1 : slo.actualDowntimeMinutes;
+
           // 상태 판정
           const newStatus = deriveSloStatus(newSliValue, slo.target);
           const previousState = monitoringState[slo.id];
           const previousStatus = previousState?.currentStatus || 'GOOD';
 
           // 값이 변경되었을 경우만 업데이트
-          if (Math.abs(newSliValue - slo.sliValue) > 0.001) {
-            await updateSlo(slo.id, { sliValue: newSliValue });
+          if (
+            Math.abs(newSliValue - slo.sliValue) > 0.001 ||
+            actualDowntimeMinutes !== slo.actualDowntimeMinutes
+          ) {
+            await updateSlo(slo.id, {
+              sliValue: newSliValue,
+              actualDowntimeMinutes: actualDowntimeMinutes,
+            });
           }
 
           // 상태 변화 감지 및 알림 발송
@@ -208,7 +221,7 @@ export function useSloMetricsMonitoring(serviceName: string) {
     };
 
     updateSloAndAlert();
-  }, [metrics, slos, getMetricValue, monitoringState, dispatchAlert]);
+  }, [metrics, slos, getMetricValue, dispatchAlert, monitoringState]);
 
   return {
     monitoringState,

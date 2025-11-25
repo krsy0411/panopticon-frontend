@@ -18,7 +18,7 @@ export default function ServicesPage() {
   const [category, setCategory] = useState<ServiceListCategory>('card');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const pageSize = 10;
 
   // 시간 범위 생성
   const timeRange = useMemo(() => {
@@ -83,11 +83,6 @@ export default function ServicesPage() {
     router.push('/services/install');
   };
 
-  const handleEditClick = () => {
-    // TODO: 기존 서비스 설정 수정 로직
-    console.log('Edit service functionality coming soon');
-  };
-
   return (
     <div className="bg-gray-50 p-8 space-y-6 h-full">
       <section className="flex flex-col gap-6 lg:flex-row">
@@ -105,20 +100,13 @@ export default function ServicesPage() {
             <span className="text-xs text-gray-400">{filteredServices.length}개 서비스</span>
           </div>
 
-          {/* 필터 (검색 / 시간 / 페이지당 개수) */}
+          {/* 필터 (검색) */}
           <ServiceListFilters
             searchValue={searchKeyword}
             onSearchChange={(value) => {
               setSearchKeyword(value);
               setPage(1);
             }}
-            pageSize={pageSize}
-            onPageSizeChange={(value) => {
-              setPageSize(value);
-              setPage(1);
-            }}
-            onEditClick={handleEditClick}
-            onCreateClick={handleCreateClick}
           />
 
           {/* 카테고리별 콘텐츠 */}

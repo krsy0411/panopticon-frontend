@@ -7,6 +7,7 @@ import PullUpPanelLayout from '@/components/ui/PullUpPanelLayout';
 
 interface TraceAnalysisPullUpPanelProps {
   spanId: string;
+  traceId: string;
   spans: SpanItem[];
   logs: LogItem[];
   onClose?: () => void;
@@ -58,6 +59,7 @@ const getLogLevelColor = (level: string) => {
 
 export default function TraceAnalysisPullUpPanel({
   spanId,
+  traceId,
   spans,
   logs,
   onClose,
@@ -69,10 +71,10 @@ export default function TraceAnalysisPullUpPanel({
     return spans.find((span) => span.span_id === spanId);
   }, [spans, spanId]);
 
-  // 선택된 스팬과 관련된 로그 필터링
+  // 선택된 트레이스와 관련된 로그 필터링
   const relatedLogs = useMemo(() => {
-    return logs.filter((log) => log.span_id === spanId);
-  }, [logs, spanId]);
+    return logs.filter((log) => log.trace_id === traceId);
+  }, [logs, traceId]);
 
   if (!selectedSpan) {
     return null;

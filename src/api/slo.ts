@@ -4,11 +4,14 @@
  * 쿠키 기반 인증(httpOnly auth-token cookie)을 사용합니다.
  */
 
+import { fetchWithAuth } from './auth';
+
 // ==================== 타입 정의 ====================
 
 export interface SloResponse {
   id: string;
   userId: string;
+  serviceName?: string;
   name: string;
   metric: 'availability' | 'latency' | 'error_rate';
   target: number;
@@ -22,6 +25,7 @@ export interface SloResponse {
 }
 
 export interface CreateSloDto {
+  serviceName?: string;
   name: string;
   metric: 'availability' | 'latency' | 'error_rate';
   target: number;
@@ -33,6 +37,7 @@ export interface CreateSloDto {
 }
 
 export interface UpdateSloDto {
+  serviceName?: string;
   name?: string;
   metric?: 'availability' | 'latency' | 'error_rate';
   target?: number;
@@ -41,53 +46,6 @@ export interface UpdateSloDto {
   totalMinutes?: number;
   connectedChannels?: string[];
   description?: string;
-}
-
-// ==================== API Base URL ====================
-
-const getAuthServerUrl = (): string => {
-  return process.env.NEXT_PUBLIC_AUTH_API_BASE_URL || 'http://localhost:8080';
-};
-
-// ==================== Fetch 헬퍼 ====================
-
-async function fetchWithAuth<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const baseUrl = getAuthServerUrl();
-  const fullUrl = `${baseUrl}${url}`;
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
-
-  // 쿠키 자동 포함 (credentials: 'include')
-  const response = await fetch(fullUrl, {
-    ...options,
-    headers,
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    let errorMessage = `HTTP error! status: ${response.status}`;
-    try {
-      const errorData = await response.json();
-      if (errorData.message) {
-        errorMessage = errorData.message;
-      } else if (errorData.error) {
-        errorMessage = errorData.error;
-      }
-    } catch {
-      // Could not parse error response as JSON
-    }
-    throw new Error(errorMessage);
-  }
-
-  const contentLength = response.headers.get('content-length');
-  if (contentLength === '0' || !contentLength) {
-    return undefined as T;
-  }
-
-  return response.json() as Promise<T>;
 }
 
 // ==================== API 함수들 ====================

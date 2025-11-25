@@ -26,11 +26,17 @@ echarts.use([
 interface WaterfallViewProps {
   spans: SpanItem[];
   onSpanSelect: (id: string | null) => void;
+  height?: string | number;
 }
 
 import { getBucketColor, getBucketLabel, getBucketByIndex } from '@/src/utils/durationBuckets';
+import StateHandler from '@/components/ui/StateHandler';
 
-export default function WaterfallView({ spans, onSpanSelect }: WaterfallViewProps) {
+export default function WaterfallView({
+  spans,
+  onSpanSelect,
+  height = '500px',
+}: WaterfallViewProps) {
   const chartOption = useMemo<EChartsOption | null>(() => {
     if (!spans || spans.length === 0) return null;
 
@@ -82,9 +88,9 @@ export default function WaterfallView({ spans, onSpanSelect }: WaterfallViewProp
         borderWidth: 0,
         textStyle: {
           color: '#ffffff',
-          fontSize: 15,
+          fontSize: 28,
         },
-        padding: 16,
+        padding: 14,
         formatter: (params: any) => {
           const spanId = params.data?.spanId;
           const span = spans.find((s) => s.span_id === spanId);
@@ -94,20 +100,20 @@ export default function WaterfallView({ spans, onSpanSelect }: WaterfallViewProp
           const statusText = getBucketLabel(ratio);
 
           return `
-            <div style="line-height: 1.8;">
-              <div style="font-weight: 600; font-size: 16px; margin-bottom: 10px; color: #fff;">
+            <div style="line-height: 1.2;">
+              <div style="font-weight: 600; font-size: 24px; margin-bottom: 6px; color: #fff;line-height:1.2;">
                 ${span.name}
               </div>
-              <div style="color: #e2e8f0; margin-bottom: 8px; font-size: 15px;">
-                Duration:
+              <div style="color: #e2e8f0; font-size: 20px;line-height:1.2;">
+                총 시간:
                 <span style="color:#fff;font-weight:600;">
                   ${(span.duration_ms ?? 0).toFixed(2)} ms
                 </span>
               </div>
-              <div style="color: #e2e8f0; margin-bottom: 6px; font-size: 15px;">
-                Status: ${statusText}
+              <div style="color: #e2e8f0; font-size: 20px;line-height:1.2;">
+                상태: ${statusText}
               </div>
-              <div style="color:#94a3b8;font-size:12px;margin-top:8px;font-family:monospace;">
+              <div style="color:#94a3b8;font-size:18px;margin-top:8px;font-family:monospace;">
                 ${span.span_id}
               </div>
             </div>
@@ -130,7 +136,7 @@ export default function WaterfallView({ spans, onSpanSelect }: WaterfallViewProp
         type: 'category',
         data: yAxisData,
         inverse: true,
-        axisLabel: { fontSize: 12, color: '#374151', fontWeight: 500 },
+        axisLabel: { fontSize: 12, color: '#374151', fontWeight: 700 },
         axisLine: { show: true, lineStyle: { color: '#d1d5db' } },
         axisTick: { show: false },
       },
@@ -162,14 +168,6 @@ export default function WaterfallView({ spans, onSpanSelect }: WaterfallViewProp
     };
   }, [spans]);
 
-  if (!spans || spans.length === 0) {
-    return <div className="text-sm text-gray-500">표시할 스팬 데이터가 없습니다</div>;
-  }
-
-  if (!chartOption) {
-    return <div className="text-sm text-gray-500">차트를 생성할 수 없습니다</div>;
-  }
-
   const onEvents = {
     click: (params: any) => {
       if (params.data && params.data.spanId) {
@@ -179,30 +177,36 @@ export default function WaterfallView({ spans, onSpanSelect }: WaterfallViewProp
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-end mb-4 px-1">
-        <div className="flex items-center gap-3 text-xs text-gray-600">
-          {Array.from({ length: 5 }).map((_, i) => {
-            const b = getBucketByIndex(i);
-            return (
-              <div key={i} className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-sm" style={{ background: b.color }}></div>
-                <span>{b.label}</span>
-              </div>
-            );
-          })}
+    <StateHandler
+      isEmpty={!spans || spans.length === 0 || !chartOption}
+      type="chart"
+      height={height}
+    >
+      <div className="h-full flex flex-col">
+        <div className="flex items-center justify-end mb-4 px-1">
+          <div className="flex items-center gap-3 text-xs text-gray-600">
+            {Array.from({ length: 5 }).map((_, i) => {
+              const b = getBucketByIndex(i);
+              return (
+                <div key={i} className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-sm" style={{ background: b.color }}></div>
+                  <span>{b.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex-1 bg-linear-to-br from-slate-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <ReactEChartsCore
+            echarts={echarts}
+            option={chartOption}
+            onEvents={onEvents}
+            style={{ height: '100%', width: '100%', minHeight: '500px' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
         </div>
       </div>
-      <div className="flex-1 bg-linear-to-br from-slate-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <ReactEChartsCore
-          echarts={echarts}
-          option={chartOption}
-          onEvents={onEvents}
-          style={{ height: '100%', width: '100%', minHeight: '500px' }}
-          notMerge={true}
-          lazyUpdate={true}
-        />
-      </div>
-    </div>
+    </StateHandler>
   );
 }

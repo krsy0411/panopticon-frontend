@@ -1,10 +1,5 @@
-import { Suspense } from 'react';
-import InstallPageClient from './InstallPageClient';
+import AgentSelectionPage from '@/components/features/agent-install/AgentSelectionPage';
 
 export default function Page() {
-  return (
-    <Suspense fallback={<div />}>
-      <InstallPageClient />
-    </Suspense>
-  );
+  return <AgentSelectionPage />;
 }

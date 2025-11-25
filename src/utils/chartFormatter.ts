@@ -209,18 +209,18 @@ export function getTimeAxisFormatter(interval: string): string {
  */
 export function getBarMaxWidthForTimeAxis(interval: string): number {
   const barMaxWidthMap: Record<string, number> = {
-    '45s': 40, // 15분: 매우 넓음
-    '1m': 38, // 30분: 넓음
-    '2m': 34, // 45분: 넓음
-    '3m': 30, // 1시간: 중간
-    '10m': 27, // 3시간: 중간
-    '20m': 24, // 6시간: 조금 좁음
-    '30m': 21, // 12시간: 좁음
-    '1h': 18, // 1일: 좁음
-    '6h': 15, // 1주: 매우 좁음
-    '12h': 12, // 2주: 매우 좁음
-    '1d': 10, // 1개월: 가장 좁음
+    '20s': 29, // 20초: 가장 넓음 (45개 포인트)
+    '30s': 27, // 30초: 넓음 (60개 포인트)
+    '45s': 26, // 45초: 넓음 (60개 포인트)
+    '1m': 25, // 1분: 넓음 (60개 포인트)
+    '3m': 23, // 3분: 넓음 (60개 포인트)
+    '7m': 22, // 7분: 중간 (51개 포인트)
+    '12m': 21, // 12분: 중간 (60개 포인트)
+    '25m': 20, // 25분: 중간 (57개 포인트)
+    '2h': 19, // 2시간: 좁음 (약 70개 포인트)
+    '3h': 18, // 3시간: 더 좁음 (약 56개 포인트)
+    '12h': 16, // 12시간: 더 좁음 (60개 포인트)
   };
 
-  return barMaxWidthMap[interval] || 25; // 기본값
+  return barMaxWidthMap[interval] || 15; // 기본값
 }

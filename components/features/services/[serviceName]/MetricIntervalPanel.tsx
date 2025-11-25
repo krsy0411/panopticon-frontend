@@ -28,6 +28,7 @@ interface Props {
   end: number; // ms
   chartData: any;
   serviceName: string;
+  selectedChartType?: 'requests' | 'error_rate' | 'latency';
 }
 
 export default function MetricIntervalPanel({
@@ -37,6 +38,7 @@ export default function MetricIntervalPanel({
   end,
   chartData,
   serviceName,
+  selectedChartType = 'requests',
 }: Props) {
   // We'll short-circuit to a fallback render below if needed, after hooks
   // 필터링: 주어진 start..end 범위 내의 포인트만 사용
@@ -190,9 +192,15 @@ export default function MetricIntervalPanel({
   // endpoint trace panel state
   const [selectedEndpoint, setSelectedEndpoint] = useState<string | null>(null);
   const [isEndpointPanelOpen, setIsEndpointPanelOpen] = useState(false);
+
   const [selectedMetric, setSelectedMetric] = useState<'requests' | 'error_rate' | 'latency'>(
-    'requests',
+    selectedChartType,
   );
+
+  // selectedChartType이 변경되면 selectedMetric 업데이트
+  useEffect(() => {
+    setSelectedMetric(selectedChartType);
+  }, [selectedChartType]);
 
   const metricOptions = [
     { label: '요청수', value: 'requests' as const },
