@@ -234,8 +234,8 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
       trigger: 'item',
       backgroundColor: 'rgba(0,0,0,0.8)',
       borderColor: 'transparent',
-      textStyle: { color: '#f9fafb', fontSize: 12 },
-      padding: 8,
+      textStyle: { color: '#f9fafb', fontSize: 28 },
+      padding: 12,
       formatter: (params: { value: [number, number]; seriesName: string; dataIndex: number }) => {
         const [timestamp, duration] = params.value;
         const status = params.seriesName;
@@ -257,13 +257,17 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
         });
 
         return `
-          <div style="font-weight:700;margin-bottom:6px;font-size:14px;">${status}</div>
-          <div style="margin:2px 0;">Trace ID: ${trace.trace_id}</div>
-          <div style="margin:2px 0;">Service: ${trace.service_name}</div>
-          <div style="margin:2px 0;">Resource: ${trace.root_span_name}</div>
-          <div style="margin:2px 0;">Time: ${formattedTime}</div>
-          <div style="margin:2px 0;">Duration: ${duration.toFixed(2)} ms</div>
-          <div style="margin-top:8px;color:#3b82f6;font-size:11px;">Click to view details</div>
+          <div style="font-weight:700;margin-bottom:6px;font-size:28px;line-height:1.2;${
+            status === 'Error' ? 'color:#ef4444;' : 'color:#10b981;'
+          }">${status}</div>
+          <div style="line-height:1.2;font-size:20px;">트레이스 ID: ${trace.trace_id}</div>
+          <div style="line-height:1.2;font-size:20px;">서비스: ${trace.service_name}</div>
+          <div style="line-height:1.2;font-size:20px;">리소스: ${trace.root_span_name}</div>
+          <div style="line-height:1.2;font-size:20px;">타임 스탬프: ${formattedTime}</div>
+          <div style="line-height:1.2;font-size:20px;">총 시간: ${duration.toFixed(2)} ms</div>
+          <div style="margin-top:6px;color:#3b82f6;font-size:14px;${
+            status === 'Error' ? 'color:#ef4444;' : 'color:#10b981;'
+          }">클릭하여 세부 정보 보기</div>
         `;
       },
     },

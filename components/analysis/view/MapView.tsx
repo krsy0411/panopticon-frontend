@@ -14,6 +14,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import type { EChartsOption } from 'echarts';
 import type { SpanItem } from '@/types/apm';
 import { getBucketColor, getBucketLabel, getBucketByIndex } from '@/src/utils/durationBuckets';
+import StateHandler from '@/components/ui/StateHandler';
 
 echarts.use([
   TitleComponent,
@@ -27,11 +28,10 @@ echarts.use([
 interface MapViewProps {
   spans: SpanItem[];
   onSpanSelect: (id: string | null) => void;
+  height?: string | number;
 }
 
-// colors and labels are provided by durationBuckets util
-
-export default function MapView({ spans, onSpanSelect }: MapViewProps) {
+export default function MapView({ spans, onSpanSelect, height = '600px' }: MapViewProps) {
   const chartOption = useMemo<EChartsOption | null>(() => {
     if (!spans || spans.length === 0) {
       return null;
@@ -73,12 +73,19 @@ export default function MapView({ spans, onSpanSelect }: MapViewProps) {
       .sort((a, b) => a - b)
       .map((k) => levelMap.get(k) || []);
 
-    // Compute positions for graph layout
+    // Force-directed 레이아웃을 사용하므로 초기 위치만 설정
+    // (ECharts가 자동으로 최적 거리를 계산함)
     const positionsMap = new Map<string, { x: number; y: number }>();
-    levelsArr.forEach((level, idx) => {
-      level.forEach((s, i) => {
-        const x = idx * 300;
-        const y = i * 100;
+
+    levelsArr.forEach((level, depthIdx) => {
+      // 초기 위치: 깊이에 따라 약간의 x 오프셋 제공 (force-directed가 조정할 것)
+      const baseX = depthIdx * 100;
+      const levelHeight = level.length * 100;
+      const startY = -levelHeight / 2;
+
+      level.forEach((s, nodeIdx) => {
+        const x = baseX;
+        const y = startY + nodeIdx * 100 + 50;
         positionsMap.set(s.span_id, { x, y });
       });
     });
@@ -95,35 +102,34 @@ export default function MapView({ spans, onSpanSelect }: MapViewProps) {
 
       return {
         id: s.span_id,
-        name: s.name.length > 20 ? s.name.slice(0, 17) + '...' : s.name,
+        name: s.name.length > 15 ? s.name.slice(0, 12) + '...' : s.name,
         x: pos.x,
         y: pos.y,
         value: dur.toFixed(2),
-        symbolSize: 80,
+        symbolSize: 100,
         symbol: 'circle',
         itemStyle: {
           color: color,
           borderWidth: 0,
-          // selectedSpan에 따른 하이라이트 제거: 항상 동일한 그림자 사용
           shadowBlur: 12,
           shadowColor: 'rgba(0, 0, 0, 0.15)',
           shadowOffsetY: 3,
         },
         label: {
           show: true,
-          position: [0, 100] as [number, number],
+          position: 'inside' as any,
           formatter: (params: any) => {
             return `{name|${params.data.name}}\n{value|${params.data.value}ms}`;
           },
           rich: {
             name: {
-              fontSize: 12,
+              fontSize: 11,
               color: '#1f2937',
-              fontWeight: 600,
+              fontWeight: 700,
               align: 'center' as const,
             },
             value: {
-              fontSize: 11,
+              fontSize: 10,
               color: '#6b7280',
               padding: [2, 0, 0, 0] as [number, number, number, number],
               fontFamily: 'ui-monospace, monospace',
@@ -158,24 +164,24 @@ export default function MapView({ spans, onSpanSelect }: MapViewProps) {
         borderWidth: 0,
         textStyle: {
           color: '#ffffff',
-          fontSize: 15,
+          fontSize: 28,
         },
-        padding: 16,
+        padding: 14,
         formatter: (params: any) => {
           if (params.dataType === 'node') {
             const span = spans.find((s) => s.span_id === params.data.id);
             if (!span) return '';
             const ratio = (span.duration_ms ?? 0) / maxDuration;
             const statusText = getBucketLabel(ratio);
-            return `<div style="line-height: 1.8;">
-              <div style="font-weight: 700; font-size: 18px; margin-bottom: 10px; color: #fff;">${
+            return `<div style="line-height: 1.2;">
+              <div style="font-weight: 700; font-size: 24px; margin-bottom: 6px; color: #fff;line-height:1.2;">${
                 span.name
               }</div>
-              <div style="color: #e2e8f0; margin-bottom: 8px; font-size: 15px;">Duration: <span style="color: #fff; font-weight: 600;">${(
+              <div style="color: #e2e8f0; font-size: 20px;line-height:1.2;">총 시간: <span style="color: #fff; font-weight: 600;">${(
                 span.duration_ms ?? 0
               ).toFixed(2)} ms</span></div>
-              <div style="color: #e2e8f0; margin-bottom: 6px; font-size: 15px;">Status: ${statusText}</div>
-              <div style="color: #94a3b8; font-size: 13px; margin-top: 10px; font-family: monospace;">${
+              <div style="color: #e2e8f0; font-size: 20px;line-height:1.2;">상태: ${statusText}</div>
+              <div style="color: #94a3b8; font-size: 18px; margin-top: 10px; font-family: monospace;">${
                 span.span_id
               }</div>
             </div>`;
@@ -184,15 +190,15 @@ export default function MapView({ spans, onSpanSelect }: MapViewProps) {
             const sourceSpan = spans.find((s) => s.span_id === params.data.source);
             const targetSpan = spans.find((s) => s.span_id === params.data.target);
             if (!sourceSpan || !targetSpan) return '';
-            return `<div style="line-height: 1.8;">
-              <div style="font-weight: 700; font-size: 18px; margin-bottom: 10px; color: #fff;">Dependency</div>
-              <div style="color: #e2e8f0; margin-bottom: 8px; font-size: 15px;">
+            return `<div style="line-height: 1.2;">
+              <div style="font-weight: 700; font-size: 24px; margin-bottom: 6px; color: #fff;line-height:1.2;">Dependency</div>
+              <div style="color: #e2e8f0; font-size: 20px;line-height:1.2;">
                 <span style="color: #a5b4fc; font-weight: 600;">From:</span> ${sourceSpan.name}
               </div>
-              <div style="color: #e2e8f0; font-size: 15px;">
+              <div style="color: #e2e8f0; font-size: 20px;line-height:1.2;">
                 <span style="color: #fbbf24; font-weight: 600;">To:</span> ${targetSpan.name}
               </div>
-              <div style="color: #94a3b8; font-size: 13px; margin-top: 10px;">
+              <div style="color: #94a3b8; font-size: 18px; margin-top: 8px;">
                 ${sourceSpan.name} → ${targetSpan.name}
               </div>
             </div>`;
@@ -203,7 +209,14 @@ export default function MapView({ spans, onSpanSelect }: MapViewProps) {
       series: [
         {
           type: 'graph',
-          layout: 'none',
+          layout: 'force',
+          force: {
+            repulsion: 1500,
+            gravity: 0.1,
+            edgeLength: 150,
+            friction: 0.1,
+            initLayout: 'circular',
+          },
           data: nodes,
           links: links,
           roam: true,
@@ -222,18 +235,11 @@ export default function MapView({ spans, onSpanSelect }: MapViewProps) {
             curveness: 0.2,
             opacity: 0.4,
           },
+          animation: false,
         },
       ],
     };
   }, [spans]);
-
-  if (!spans || spans.length === 0) {
-    return <div className="text-sm text-gray-500">표시할 스팬 데이터가 없습니다</div>;
-  }
-
-  if (!chartOption) {
-    return <div className="text-sm text-gray-500">차트를 생성할 수 없습니다</div>;
-  }
 
   const onEvents = {
     click: (params: any) => {
@@ -244,30 +250,36 @@ export default function MapView({ spans, onSpanSelect }: MapViewProps) {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-end mb-4 px-1">
-        <div className="flex items-center gap-3 text-xs text-gray-600">
-          {Array.from({ length: 5 }).map((_, i) => {
-            const b = getBucketByIndex(i);
-            return (
-              <div key={i} className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full" style={{ background: b.color }}></div>
-                <span>{b.label}</span>
-              </div>
-            );
-          })}
+    <StateHandler
+      isEmpty={!spans || spans.length === 0 || !chartOption}
+      type="chart"
+      height={height}
+    >
+      <div className="h-full flex flex-col">
+        <div className="flex items-center justify-end mb-4 px-1">
+          <div className="flex items-center gap-3 text-xs text-gray-600">
+            {Array.from({ length: 5 }).map((_, i) => {
+              const b = getBucketByIndex(i);
+              return (
+                <div key={i} className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full" style={{ background: b.color }}></div>
+                  <span>{b.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex-1 bg-linear-to-br from-slate-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <ReactEChartsCore
+            echarts={echarts}
+            option={chartOption}
+            onEvents={onEvents}
+            style={{ height: '100%', width: '100%', minHeight: '600px' }}
+            notMerge={true}
+            lazyUpdate={true}
+          />
         </div>
       </div>
-      <div className="flex-1 bg-linear-to-br from-slate-50 to-gray-100 rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <ReactEChartsCore
-          echarts={echarts}
-          option={chartOption}
-          onEvents={onEvents}
-          style={{ height: '100%', width: '100%', minHeight: '600px' }}
-          notMerge={true}
-          lazyUpdate={true}
-        />
-      </div>
-    </div>
+    </StateHandler>
   );
 }

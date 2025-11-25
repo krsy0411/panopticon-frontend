@@ -63,7 +63,7 @@ export default function Sidebar() {
               <button
                 key={key}
                 onClick={() => scrollToSection(key)}
-                className={`w-full px-3 py-2.5 rounded-lg flex items-center gap-2 text-sm transition ${
+                className={`w-full px-3 py-2.5 rounded-lg flex items-center gap-2 text-base transition ${
                   active ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >

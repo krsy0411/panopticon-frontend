@@ -18,14 +18,10 @@ const ITEMS_PER_PAGE = 10;
 // API에서 가져올 총 엔드포인트 수
 const TOTAL_ENDPOINTS_LIMIT = 200;
 
-// (ECharts tooltip 타입은 더 이상 로컬에서 사용하지 않습니다)
-
-// (차트 팔레트는 개별 렌더러에서 관리)
-
 type MetricType = 'requests' | 'latency' | 'error_rate';
 
-// pie/bar 공통 팔레트
-const CHART_COLORS = ['#537FE7', '#5BC0BE', '#FFB562'];
+// pie/bar 공통 팔레트 (상위 7개 엔드포인트용)
+const CHART_COLORS = ['#537FE7', '#5BC0BE', '#FFB562', '#F472B6', '#A78BFA', '#EC4899', '#6366F1'];
 
 // 엔드포인트 테이블용 데이터 타입
 interface EndpointTableData {
@@ -175,7 +171,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
   const topEndpoints = useMemo(() => {
     return allEndpoints.slice(0, 7).map((ep, idx) => ({
       ...ep,
-      color: CHART_COLORS[idx % CHART_COLORS.length], // 색상 순환
+      color: CHART_COLORS[idx], // 각 엔드포인트마다 고유한 색상
     }));
   }, [allEndpoints]);
 
@@ -278,6 +274,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
                 colors={CHART_COLORS}
                 allItems={allEndpoints}
                 onBarClick={(name: string) => handleEndpointClick(name)}
+                hideXAxisLabel={true}
               />
             </div>
           </div>

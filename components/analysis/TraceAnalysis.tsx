@@ -25,8 +25,8 @@ type ViewMode = 'map' | 'flamegraph' | 'waterfall' | 'spanlist';
 
 export default function TraceAnalysis({ isOpen, onClose, traceId }: TraceAnalysisProps) {
   // traceId를 key로 사용하여 상태 초기화
-  // 기본은 Map을 먼저 보여줌
-  const [viewMode, setViewMode] = useState<ViewMode>('map');
+  // 기본은 Waterfall을 먼저 보여줌
+  const [viewMode, setViewMode] = useState<ViewMode>('waterfall');
   const [selectedSpanId, setSelectedSpanId] = useState<string | null>(null);
 
   // Trace 데이터 가져오기
@@ -74,9 +74,9 @@ export default function TraceAnalysis({ isOpen, onClose, traceId }: TraceAnalysi
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'OK':
-        return 'text-green-600 bg-green-50';
+        return 'text-emerald-500 bg-emerald-50';
       case 'ERROR':
-        return 'text-red-600 bg-red-50';
+        return 'text-red-400 bg-red-50';
       default:
         return 'text-gray-600 bg-gray-50';
     }
@@ -177,6 +177,16 @@ export default function TraceAnalysis({ isOpen, onClose, traceId }: TraceAnalysi
         <div className="flex border-b border-gray-200">
           <button
             className={`flex-1 px-6 py-3 text-sm font-medium transition-colors hover:cursor-pointer ${
+              viewMode === 'waterfall'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => setViewMode('waterfall')}
+          >
+            Waterfall
+          </button>
+          <button
+            className={`flex-1 px-6 py-3 text-sm font-medium transition-colors hover:cursor-pointer ${
               viewMode === 'map'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
@@ -194,16 +204,6 @@ export default function TraceAnalysis({ isOpen, onClose, traceId }: TraceAnalysi
             onClick={() => setViewMode('flamegraph')}
           >
             Flame Graph
-          </button>
-          <button
-            className={`flex-1 px-6 py-3 text-sm font-medium transition-colors hover:cursor-pointer ${
-              viewMode === 'waterfall'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-            onClick={() => setViewMode('waterfall')}
-          >
-            Waterfall
           </button>
           <button
             className={`flex-1 px-6 py-3 text-sm font-medium transition-colors hover:cursor-pointer ${

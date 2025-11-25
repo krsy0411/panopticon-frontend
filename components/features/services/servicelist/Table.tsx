@@ -6,6 +6,7 @@ import Table from '@/components/ui/Table';
 import Pagination from '@/components/features/services/Pagination';
 import type { ServiceSummary } from '@/types/apm';
 import type { PaginationControls } from '@/types/servicelist';
+import { isErrorHealthy, isLatencyHealthy } from '@/src/utils/healthcheck';
 
 interface ServiceListTableProps {
   services: ServiceSummary[];
@@ -44,8 +45,10 @@ const columns = [
     header: 'Error Rate',
     width: '15%',
     render: (value: ServiceSummary[keyof ServiceSummary]) => {
-      const rate = ((value as number) * 100).toFixed(2);
-      return <span>{rate}%</span>;
+      const errorRate = value as number;
+      const rate = (errorRate * 100).toFixed(2);
+      const healthy = isErrorHealthy(errorRate);
+      return <span className={healthy ? 'text-emerald-600' : 'text-rose-600'}>{rate}%</span>;
     },
   },
   {
@@ -53,8 +56,13 @@ const columns = [
     header: 'P95 Latency',
     width: '15%',
     render: (value: ServiceSummary[keyof ServiceSummary]) => {
-      const latency = (value as number).toFixed(2);
-      return <span>{latency}ms</span>;
+      const latency = value as number;
+      const healthy = isLatencyHealthy(latency);
+      return (
+        <span className={healthy ? 'text-emerald-600' : 'text-rose-600'}>
+          {latency.toFixed(2)}ms
+        </span>
+      );
     },
   },
 ];

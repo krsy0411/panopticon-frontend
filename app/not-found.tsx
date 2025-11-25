@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export default function NotFoundPage() {
   return (
-    <main className="flex flex-col items-center justify-center px-4 bg-white text-center">
+    <main className="min-h-screen flex flex-col items-center justify-center px-4 bg-white text-center">
       <Image
         src="/errorpage/404.png"
         alt="404 고양이"

@@ -5,63 +5,12 @@ import { IoClose } from 'react-icons/io5';
 import { useQuery } from '@tanstack/react-query';
 import { getEndpointTraces } from '@/src/api/apm';
 import { TraceStatusFilter, EndpointTraceItem } from '@/types/apm';
-import { useTimeRangeStore } from '@/src/store/timeRangeStore';
+import { useTimeRangeStore, POLLING_INTERVAL } from '@/src/store/timeRangeStore';
 import StateHandler from '@/components/ui/StateHandler';
 import Dropdown from '@/components/ui/Dropdown';
+import Table, { TableColumn } from '@/components/ui/Table';
 import TraceAnalysis from './TraceAnalysis';
 import SlideOverLayout from '@/components/ui/SlideOverLayout';
-
-/**
- * Trace Card Component
- */
-interface TraceCardProps {
-  trace: EndpointTraceItem;
-  onClick: () => void;
-}
-
-function TraceCard({ trace, onClick }: TraceCardProps) {
-  return (
-    <div
-      onClick={onClick}
-      className="border border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer h-full flex flex-col"
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span
-            className={`px-2 py-1 text-xs font-medium rounded-md ${
-              trace.status === 'ERROR' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
-            }`}
-          >
-            {trace.status}
-          </span>
-          <span className="text-xs text-gray-500">{trace.serviceName}</span>
-        </div>
-      </div>
-      <div className="flex-1 space-y-3">
-        <div>
-          <p className="text-xs text-gray-500 mb-1">Trace ID</p>
-          <p className="font-mono text-xs text-gray-900 break-all line-clamp-2">{trace.traceId}</p>
-        </div>
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Duration</p>
-            <p className="font-mono text-sm font-semibold text-gray-900">
-              {trace.durationMs >= 1000
-                ? `${(trace.durationMs / 1000).toFixed(2)}s`
-                : `${trace.durationMs.toFixed(2)}ms`}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-500 mb-1">Time</p>
-            <p className="text-xs text-gray-700">
-              {new Date(trace.timestamp).toLocaleTimeString('ko-KR')}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /**
  * Endpoint Trace Analysis Component
@@ -74,6 +23,8 @@ interface EndpointTraceAnalysisProps {
   endpointName: string;
 }
 
+type SortOption = 'ERROR_SLOW' | 'ERROR_LATEST' | 'SLOW';
+
 export default function EndpointTraceAnalysis({
   isOpen,
   onClose,
@@ -81,11 +32,14 @@ export default function EndpointTraceAnalysis({
   endpointName,
 }: EndpointTraceAnalysisProps) {
   // 상태 관리
-  const [status, setStatus] = useState<TraceStatusFilter>('ERROR');
+  const [sortOption, setSortOption] = useState<SortOption>('SLOW');
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const { startTime, endTime } = useTimeRangeStore();
 
-  // 트레이스 데이터 가져오기
+  // sortOption에서 status 추출
+  const status: TraceStatusFilter = sortOption === 'SLOW' ? 'SLOW' : 'ERROR';
+
+  // 트레이스 데이터 가져오기 (10초마다 폴링)
   const {
     data: rawData,
     isLoading,
@@ -100,10 +54,24 @@ export default function EndpointTraceAnalysis({
         limit: 20,
       }),
     enabled: isOpen && !!serviceName && !!endpointName,
+    refetchInterval: POLLING_INTERVAL,
+    refetchIntervalInBackground: true,
+    staleTime: 2000, // 2초 동안은 fresh 상태 유지
   });
 
-  // durationMs 기준 내림차순 정렬 (큰 값이 앞에 오도록)
-  const data = rawData ? [...rawData].sort((a, b) => b.durationMs - a.durationMs) : rawData;
+  // sortOption에 따른 정렬
+  const data = rawData
+    ? [...rawData].sort((a, b) => {
+        if (sortOption === 'ERROR_SLOW' || sortOption === 'SLOW') {
+          // 느린순: durationMs 기준 내림차순
+          return b.durationMs - a.durationMs;
+        } else if (sortOption === 'ERROR_LATEST') {
+          // 최신순: timestamp 기준 내림차순
+          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        }
+        return 0;
+      })
+    : rawData;
 
   // ESC 키로 닫기
   useEffect(() => {
@@ -130,10 +98,11 @@ export default function EndpointTraceAnalysis({
 
   if (!isOpen) return null;
 
-  // Status 드롭다운 옵션
-  const statusOptions = [
-    { label: '에러 (최신순)', value: 'ERROR' as const },
+  // 정렬 옵션
+  const sortOptions = [
     { label: '느린순', value: 'SLOW' as const },
+    { label: '에러(느린순)', value: 'ERROR_SLOW' as const },
+    { label: '에러(최신순)', value: 'ERROR_LATEST' as const },
   ];
 
   // 트레이스 클릭 핸들러
@@ -145,6 +114,59 @@ export default function EndpointTraceAnalysis({
   const handleTraceAnalysisClose = () => {
     setSelectedTraceId(null);
   };
+
+  // 테이블 컬럼 정의
+  const columns: TableColumn<EndpointTraceItem>[] = [
+    {
+      key: 'status',
+      header: 'Status',
+      width: '12%',
+      render: (status) => (
+        <span
+          className={`inline-block px-2 py-1 text-xs font-medium rounded-md ${
+            status === 'ERROR' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+          }`}
+        >
+          {status}
+        </span>
+      ),
+      sortable: false,
+    },
+    {
+      key: 'serviceName',
+      header: 'Service',
+      width: '15%',
+      sortable: false,
+    },
+    {
+      key: 'traceId',
+      header: 'Trace ID',
+      width: '35%',
+      render: (traceId) => <span className="font-mono text-xs text-gray-600">{traceId}</span>,
+      sortable: false,
+    },
+    {
+      key: 'durationMs',
+      header: 'Duration',
+      width: '18%',
+      render: (durationMs) => {
+        const duration = typeof durationMs === 'number' ? durationMs : 0;
+        return (
+          <span className="font-mono">
+            {duration >= 1000 ? `${(duration / 1000).toFixed(2)}s` : `${duration.toFixed(2)}ms`}
+          </span>
+        );
+      },
+      sortable: false,
+    },
+    {
+      key: 'timestamp',
+      header: 'Time',
+      width: '20%',
+      render: (timestamp) => <span>{new Date(timestamp).toLocaleString('ko-KR')}</span>,
+      sortable: false,
+    },
+  ];
 
   const widthClass = 'w-[70%]';
   const backdropClassName =
@@ -168,9 +190,9 @@ export default function EndpointTraceAnalysis({
             <p className="text-sm text-gray-600 font-mono">{endpointName}</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Status Dropdown */}
-            <div className="w-32">
-              <Dropdown value={status} onChange={setStatus} options={statusOptions} />
+            {/* Sort Dropdown */}
+            <div className="w-40">
+              <Dropdown value={sortOption} onChange={setSortOption} options={sortOptions} />
             </div>
             {/* Close Button */}
             <button
@@ -196,16 +218,15 @@ export default function EndpointTraceAnalysis({
             emptyMessage={`${status === 'ERROR' ? '에러' : '느린'} 트레이스가 없습니다`}
           >
             <div className="p-6">
-              {/* Trace Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {data?.map((trace) => (
-                  <TraceCard
-                    key={trace.traceId}
-                    trace={trace}
-                    onClick={() => handleTraceClick(trace)}
-                  />
-                ))}
-              </div>
+              {/* Trace Table */}
+              {data && (
+                <Table
+                  columns={columns}
+                  data={data}
+                  onRowClick={handleTraceClick}
+                  className="w-full"
+                />
+              )}
             </div>
           </StateHandler>
         </div>

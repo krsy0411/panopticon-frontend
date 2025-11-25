@@ -2,8 +2,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { HiXMark } from 'react-icons/hi2';
 import Dropdown from '@/components/ui/Dropdown';
+import { getServices } from '@/src/api/apm';
 import type { IntegrationType, SloCreateInput, TimeRangeKey } from '@/src/types/notification';
 
 interface SloCreateModalProps {
@@ -13,21 +15,6 @@ interface SloCreateModalProps {
   onClose: () => void;
   editingData?: SloCreateInput | null;
 }
-
-const metricDescriptions = {
-  availability: {
-    title: 'Availability SLO',
-    description: '비정상 응답 없이 처리된 요청의 비율입니다.',
-  },
-  latency: {
-    title: 'Latency P95',
-    description: '전체 요청 중 가장 느린 5%를 제외한 응답 시간입니다.',
-  },
-  error_rate: {
-    title: 'Error Rate',
-    description: '전체 요청 중 오류가 발생한 비율입니다.',
-  },
-};
 
 const timeRangeOptions: { label: string; value: TimeRangeKey; minutes: number }[] = [
   { label: '1시간', value: '1h', minutes: 60 },
@@ -58,46 +45,56 @@ export default function SloCreateModal({
 }: SloCreateModalProps) {
   type SloFormState = {
     id: string;
+    serviceName: string;
     name: string;
     description?: string;
     metric: SloCreateInput['metric'];
     target: number;
     timeRangeKey: TimeRangeKey;
     connectedChannels: IntegrationType[];
-    tooltipTitle: string;
-    tooltipDescription: string;
   };
 
   const getInitialForm = useCallback((): SloFormState => {
     if (editingData) {
       return {
         id: editingData.id,
+        serviceName: editingData.serviceName || '',
         name: editingData.name,
         description: editingData.description,
         metric: editingData.metric,
         target: editingData.target,
         timeRangeKey: editingData.timeRangeKey || '24h',
         connectedChannels: editingData.connectedChannels,
-        tooltipTitle: editingData.tooltipTitle,
-        tooltipDescription: editingData.tooltipDescription,
       };
     }
     return {
       id: '', // 서버가 생성할 임시 빈 값
+      serviceName: '',
       name: 'New SLO',
       description: '',
       metric: 'availability',
       target: 0.99,
       timeRangeKey: '24h',
       connectedChannels: ['slack'],
-      tooltipTitle: metricDescriptions.availability.title,
-      tooltipDescription: metricDescriptions.availability.description,
     };
   }, [editingData]);
 
   const [form, setForm] = useState<SloFormState>(() => getInitialForm());
   const [targetError, setTargetError] = useState('');
   const isEditMode = !!editingData;
+
+  // 서비스 목록 조회
+  const { data: servicesData, isLoading: servicesLoading } = useQuery({
+    queryKey: ['services'],
+    queryFn: () => getServices(),
+    enabled: open, // 모달이 열릴 때만 쿼리 실행
+  });
+
+  const serviceOptions =
+    servicesData?.services.map((service) => ({
+      label: service.service_name,
+      value: service.service_name,
+    })) || [];
 
   // editingData가 변경될 때 form을 초기화
   useEffect(() => {
@@ -125,8 +122,6 @@ export default function SloCreateModal({
 
   const handleMetricChange = (metric: SloCreateInput['metric']) => {
     handleChange('metric', metric);
-    handleChange('tooltipTitle', metricDescriptions[metric].title);
-    handleChange('tooltipDescription', metricDescriptions[metric].description);
 
     if (metric === 'latency') {
       handleChange('target', 200);
@@ -202,6 +197,26 @@ export default function SloCreateModal({
 
         {/* FORM BODY */}
         <div className="space-y-6">
+          {/* SERVICE */}
+          <div>
+            <label className="text-sm font-semibold text-gray-800">서비스</label>
+            {servicesLoading ? (
+              <div className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-500">
+                서비스 목록 로딩 중...
+              </div>
+            ) : (
+              <Dropdown
+                value={form.serviceName}
+                onChange={(value: string) => handleChange('serviceName', value)}
+                options={serviceOptions}
+                className="mt-2 w-full"
+              />
+            )}
+            {!servicesLoading && serviceOptions.length === 0 && (
+              <p className="mt-1 text-xs text-amber-600">사용 가능한 서비스가 없습니다.</p>
+            )}
+          </div>
+
           {/* NAME */}
           <div>
             <label className="text-sm font-semibold text-gray-800">이름</label>
@@ -235,7 +250,7 @@ export default function SloCreateModal({
 
           {/* METRIC */}
           <div>
-            <label className="text-sm font-semibold text-gray-800">메트릭</label>
+            <label className="text-sm font-semibold text-gray-800">모니터링 요소</label>
             <Dropdown
               value={form.metric}
               onChange={handleMetricChange}
@@ -246,7 +261,7 @@ export default function SloCreateModal({
 
           {/* TIME RANGE / WINDOW */}
           <div>
-            <label className="text-sm font-semibold text-gray-800">평가 기간</label>
+            <label className="text-sm font-semibold text-gray-800">모니터링 기간</label>
             <Dropdown
               value={form.timeRangeKey}
               onChange={(value: TimeRangeKey) => handleChange('timeRangeKey', value)}
@@ -287,7 +302,7 @@ export default function SloCreateModal({
           {/* TARGET */}
           <div>
             <label className="text-sm font-semibold text-gray-800">
-              목표값 {isLatency ? '(ms, 0~5000)' : '(0 ~ 1)'}
+              목표값 {isLatency ? '(ms, 0 이상)' : '(0 ~ 1)'}
             </label>
 
             <input

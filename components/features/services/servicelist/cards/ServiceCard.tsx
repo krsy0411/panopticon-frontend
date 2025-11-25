@@ -2,28 +2,11 @@
 
 import { KeyboardEvent } from 'react';
 import type { ServiceSummary } from '@/types/apm';
+import { isErrorHealthy, isLatencyHealthy, formatLatency } from '@/src/utils/healthcheck';
 
 interface ServiceCardProps {
   service: ServiceSummary;
   onClick?: (service: ServiceSummary) => void;
-}
-
-// 레이턴시 단위 변환
-function formatLatency(latencyMs: number) {
-  if (latencyMs >= 1000) {
-    return `${(latencyMs / 1000).toFixed(2)}s`;
-  }
-  return `${Math.round(latencyMs)}ms`;
-}
-
-// Healthy 여부 계산
-function isErrorHealthy(errorRate: number) {
-  const percent = errorRate * 100;
-  return percent < 1; // 1% 미만이면 초록색
-}
-
-function isLatencyHealthy(latencyMs: number) {
-  return latencyMs < 400; // 400ms 미만이면 초록색
 }
 
 export default function ServiceCard({ service, onClick }: ServiceCardProps) {
@@ -73,14 +56,14 @@ export default function ServiceCard({ service, onClick }: ServiceCardProps) {
       {/* 하단 지표: Requests / Error rate / Latency */}
       <dl className="mt-6 grid grid-cols-3 gap-4">
         <div>
-          <dt className="text-xs text-gray-400">Requests</dt>
-          <dd className="text-lg font-semibold text-gray-900">{request_count.toLocaleString()}</dd>
+          <dt className="text-xs font-bold text-gray-400">Requests</dt>
+          <dd className="text-lg text-gray-900">{request_count.toLocaleString()}</dd>
         </div>
 
         <div>
-          <dt className="text-xs text-gray-400">Error rate</dt>
+          <dt className="text-xs font-bold text-gray-400">Error rate</dt>
           <dd
-            className={`text-lg font-semibold ${
+            className={`text-lg ${
               errorHealthy ? 'text-emerald-600' : 'text-rose-600' // Error rate 색상 적용
             }`}
           >
@@ -89,9 +72,9 @@ export default function ServiceCard({ service, onClick }: ServiceCardProps) {
         </div>
 
         <div>
-          <dt className="text-xs text-gray-400">Latency</dt>
+          <dt className="text-xs font-bold text-gray-400">Latency</dt>
           <dd
-            className={`text-lg font-semibold ${
+            className={`text-lg ${
               latencyHealthy ? 'text-emerald-600' : 'text-rose-600' // Latency 색상 적용
             }`}
           >

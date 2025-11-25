@@ -1,6 +1,6 @@
 // Helper utilities for mapping duration ratio -> bucket, color, and label
 export const BUCKET_LABELS = ['Fast', 'Normal', 'Medium', 'Slow', 'Very Slow'] as const;
-export const BUCKET_COLORS = ['#60a5fa', '#34d399', '#fbbf24', '#fb923c', '#f43f5e'];
+export const BUCKET_COLORS = ['#93c5fd', '#86efac', '#fcd34d', '#fed7aa', '#fca5a5'];
 
 // ratio expected in [0,1+] where 1 means maxDuration
 export function ratioToBucket(ratio: number): number {

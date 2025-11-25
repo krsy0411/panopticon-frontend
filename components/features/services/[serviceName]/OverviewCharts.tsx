@@ -70,10 +70,16 @@ export default function OverviewCharts({
   // interval panel 상태
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelRange, setPanelRange] = useState<{ start: number; end: number } | null>(null);
+  const [selectedChartType, setSelectedChartType] = useState<'requests' | 'error_rate' | 'latency'>(
+    'requests',
+  );
 
   const { timeRange } = useTimeRangeStore();
 
-  const openIntervalAround = (timestamp: number) => {
+  const openIntervalAround = (
+    timestamp: number,
+    chartType: 'requests' | 'error_rate' | 'latency',
+  ) => {
     const tsNum = Number(timestamp);
     if (Number.isNaN(tsNum)) return;
     const totalRangeMs = TIME_RANGE_DURATION_MS[timeRange];
@@ -84,6 +90,7 @@ export default function OverviewCharts({
     const start = tsNum - windowMs / 2;
     const end = tsNum + windowMs / 2;
     setPanelRange({ start, end });
+    setSelectedChartType(chartType);
     setPanelOpen(true);
   };
 
@@ -111,7 +118,7 @@ export default function OverviewCharts({
               const ts =
                 (params?.value && (Array.isArray(params.value) ? params.value[0] : params.value)) ||
                 (params?.data && (Array.isArray(params.data) ? params.data[0] : params.data));
-              openIntervalAround(ts);
+              openIntervalAround(ts, 'requests');
             },
           }}
         />
@@ -139,7 +146,7 @@ export default function OverviewCharts({
               const ts =
                 (params?.value && (Array.isArray(params.value) ? params.value[0] : params.value)) ||
                 (params?.data && (Array.isArray(params.data) ? params.data[0] : params.data));
-              openIntervalAround(ts);
+              openIntervalAround(ts, 'error_rate');
             },
           }}
         />
@@ -167,7 +174,7 @@ export default function OverviewCharts({
               const ts =
                 (params?.value && (Array.isArray(params.value) ? params.value[0] : params.value)) ||
                 (params?.data && (Array.isArray(params.data) ? params.data[0] : params.data));
-              openIntervalAround(ts);
+              openIntervalAround(ts, 'latency');
             },
           }}
         />
@@ -254,7 +261,7 @@ export default function OverviewCharts({
                           (Array.isArray(params.value) ? params.value[0] : params.value)) ||
                         (params?.data &&
                           (Array.isArray(params.data) ? params.data[0] : params.data));
-                      openIntervalAround(ts);
+                      openIntervalAround(ts, 'requests');
                     },
                   }}
                 />
@@ -289,7 +296,7 @@ export default function OverviewCharts({
                           (Array.isArray(params.value) ? params.value[0] : params.value)) ||
                         (params?.data &&
                           (Array.isArray(params.data) ? params.data[0] : params.data));
-                      openIntervalAround(ts);
+                      openIntervalAround(ts, 'error_rate');
                     },
                   }}
                 />
@@ -331,7 +338,7 @@ export default function OverviewCharts({
                           (Array.isArray(params.value) ? params.value[0] : params.value)) ||
                         (params?.data &&
                           (Array.isArray(params.data) ? params.data[0] : params.data));
-                      openIntervalAround(ts);
+                      openIntervalAround(ts, 'latency');
                     },
                   }}
                 />
@@ -385,6 +392,7 @@ export default function OverviewCharts({
         end={panelRange?.end ?? 0}
         chartData={chartData}
         serviceName={serviceName}
+        selectedChartType={selectedChartType}
       />
     </div>
   );

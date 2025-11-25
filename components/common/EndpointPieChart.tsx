@@ -18,7 +18,6 @@ interface Props {
   selectedMetric: 'requests' | 'error_rate' | 'latency';
   height?: number;
   onSliceClick?: (endpointName: string) => void;
-  showLegend?: boolean;
   colors?: string[]; // 팔레트 주입 (없으면 ECharts 기본 팔레트)
 }
 
@@ -27,7 +26,6 @@ export default function EndpointPieChart({
   selectedMetric,
   height = 350,
   onSliceClick,
-  showLegend = false,
   colors,
 }: Props) {
   const pieOption = useMemo(() => {
@@ -56,8 +54,9 @@ export default function EndpointPieChart({
         trigger: 'item',
         backgroundColor: 'rgba(0,0,0,0.8)',
         borderColor: 'transparent',
-        textStyle: { color: '#f9fafb', fontSize: 12 },
-        padding: 10,
+        textStyle: { color: '#f9fafb', fontSize: 32 },
+        padding: 12,
+        confine: true,
         formatter: (params: any) => {
           const d = params.data?.endpointData || params.data || {};
           const name = params.name || d.endpoint_name || '';
@@ -66,59 +65,38 @@ export default function EndpointPieChart({
           const errorRate =
             d.error_rate !== undefined && d.error_rate !== null ? d.error_rate * 100 : null;
 
-          const mainMetricLabel =
-            selectedMetric === 'requests'
-              ? '요청수'
-              : selectedMetric === 'error_rate'
-              ? '에러율'
-              : '지연시간';
-          const mainMetricValue =
-            selectedMetric === 'requests'
-              ? requests.toLocaleString()
-              : selectedMetric === 'error_rate'
-              ? `${((d.error_rate ?? 0) * 100).toFixed(2)}%`
-              : `${p95.toFixed(2)} ms`;
-
           const errorRateText = errorRate !== null ? `${errorRate.toFixed(2)}%` : '-';
+          const requestsText = requests.toLocaleString();
 
           return `
-            <div style="font-weight:700;margin-bottom:6px;font-size:14px;">${name}</div>
-            <div style="margin:4px 0;font-size:12px;">${mainMetricLabel}: ${mainMetricValue}</div>
-            <div style="margin:4px 0;font-size:12px;">지연시간(p95): ${p95.toFixed(2)} ms</div>
-            <div style="margin:4px 0;font-size:12px;">에러율 ${errorRateText}</div>
+            <div style="font-weight:700;margin-bottom:6px;font-size:24px;line-height:1.2;">${name}</div>
+            <div style="line-height:1.2;font-size:20px;">요청수: ${requestsText}</div>
+            <div style="line-height:1.2;font-size:20px;">에러율: ${errorRateText}</div>
+            <div style="line-height:1.2;font-size:20px;">지연시간: ${p95.toFixed(2)} ms</div>
           `;
         },
       },
-      legend: showLegend
-        ? {
-            orient: 'horizontal',
-            bottom: 0,
-            data: items.map((e) => e.endpoint_name),
-            textStyle: { fontSize: 11, color: '#6b7280' },
-            type: 'scroll',
-          }
-        : { show: false },
+      legend: {
+        orient: 'horizontal',
+        bottom: 0,
+        data: items.map((e) => e.endpoint_name),
+        textStyle: { fontSize: 11, color: '#6b7280' },
+        type: 'plain',
+        itemGap: 16,
+        itemWidth: 10,
+      },
       series: [
         {
           type: 'pie',
           radius: ['40%', '70%'],
-          center: ['50%', '50%'],
+          center: ['50%', '40%'],
           data: pieData,
           label: {
-            show: true,
-            formatter: (params: any) => {
-              const ep = params.data?.endpointData || params.data || {};
-              if (selectedMetric === 'requests') {
-                return `${(ep.request_count ?? 0).toLocaleString()}`;
-              } else if (selectedMetric === 'error_rate') {
-                return `${((ep.error_rate ?? 0) * 100).toFixed(2)}%`;
-              } else if (selectedMetric === 'latency') {
-                return `${(ep.latency_p95_ms ?? 0).toFixed(2)}ms`;
-              }
-              return '{d}%';
-            },
+            show: false,
           },
-
+          labelLine: {
+            show: false,
+          },
           emphasis: {
             itemStyle: {
               shadowBlur: 10,
@@ -129,7 +107,7 @@ export default function EndpointPieChart({
         },
       ],
     } as any;
-  }, [items, selectedMetric, showLegend, colors]);
+  }, [items, selectedMetric, colors]);
 
   const events = {
     click: (params: any) => {

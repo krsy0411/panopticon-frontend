@@ -30,10 +30,6 @@ export interface CategoryContentProps {
 export interface ServiceListFiltersProps {
   searchValue: string;
   onSearchChange: (value: string) => void;
-  pageSize: number;
-  onPageSizeChange: (value: number) => void;
-  onEditClick?: () => void;
-  onCreateClick?: () => void;
 }
 
 export interface ServiceListSidebarProps {

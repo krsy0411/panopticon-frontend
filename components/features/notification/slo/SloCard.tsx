@@ -2,13 +2,14 @@
 
 import type { ComputedSlo } from '@/src/types/notification';
 import type { ReactElement } from 'react';
-import { StatusBadge } from './StatusBadge';
 import { useState } from 'react';
 
-// SLO 타입별 아이콘 추가
-const metricIcons: Record<string, ReactElement> = {
-  availability: (
-    <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-green-50 text-green-600">
+// SLO 타입별 정보 (아이콘, 라벨, 색상)
+const metricConfig: Record<string, { icon: ReactElement; label: string; color: string }> = {
+  availability: {
+    label: '가용성',
+    color: 'green',
+    icon: (
       <svg
         className="w-6 h-6"
         fill="none"
@@ -22,11 +23,12 @@ const metricIcons: Record<string, ReactElement> = {
           d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
         />
       </svg>
-    </div>
-  ),
-
-  latency: (
-    <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-yellow-50 text-yellow-600">
+    ),
+  },
+  latency: {
+    label: '레이턴시',
+    color: 'yellow',
+    icon: (
       <svg
         className="w-6 h-6"
         fill="none"
@@ -36,11 +38,12 @@ const metricIcons: Record<string, ReactElement> = {
       >
         <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
       </svg>
-    </div>
-  ),
-
-  error_rate: (
-    <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-red-50 text-red-600">
+    ),
+  },
+  error_rate: {
+    label: '에러율',
+    color: 'red',
+    icon: (
       <svg
         className="w-6 h-6"
         fill="none"
@@ -54,8 +57,14 @@ const metricIcons: Record<string, ReactElement> = {
           d="M12 9v2m0 4h.01M5.06 19h13.88c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.7-1.33-3.46 0L3.33 16c-.77 1.33.19 3 1.73 3z"
         />
       </svg>
-    </div>
-  ),
+    ),
+  },
+};
+
+const colorMap = {
+  green: { bg: 'bg-green-50', text: 'text-green-600' },
+  yellow: { bg: 'bg-yellow-50', text: 'text-yellow-600' },
+  red: { bg: 'bg-red-50', text: 'text-red-600' },
 };
 
 interface SloCardProps {
@@ -121,20 +130,38 @@ export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: Slo
       <div className="flex items-start justify-between w-full">
         {/* 왼쪽: 아이콘 + 제목 */}
         <div className="flex items-center gap-3 flex-1">
-          {/* 아이콘 */}
-          {metricIcons[slo.metric]}
+          {/* 아이콘 + 메트릭 타입 */}
+          <div
+            className={`w-16 h-16 flex flex-col items-center justify-center rounded-xl ${
+              colorMap[metricConfig[slo.metric].color].bg
+            }`}
+          >
+            <div className={colorMap[metricConfig[slo.metric].color].text}>
+              {metricConfig[slo.metric].icon}
+            </div>
+            <span
+              className={`text-xs font-semibold mt-1 ${
+                colorMap[metricConfig[slo.metric].color].text
+              }`}
+            >
+              {metricConfig[slo.metric].label}
+            </span>
+          </div>
 
           <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="text-xl font-semibold text-gray-900">{slo.name}</h3>
-            </div>
+            <h3 className="text-xl font-semibold text-gray-900">{slo.name}</h3>
+            {slo.serviceName && (
+              <div className="mt-1">
+                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700">
+                  {slo.serviceName}
+                </span>
+              </div>
+            )}
             {slo.description && <p className="mt-1 text-sm text-gray-600">{slo.description}</p>}
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <StatusBadge status={slo.status} />
-
           <button
             type="button"
             onClick={() => onEdit(slo)}
@@ -172,7 +199,7 @@ export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: Slo
       {active && (
         <>
           {/* 중단 지표 */}
-          <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-xl border border-gray-100 bg-gray-50 px-5 py-4">
               <div className="text-xs text-gray-500">SLI(지표)</div>
               <div className="mt-1 text-3xl font-bold text-gray-900">
@@ -188,17 +215,6 @@ export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: Slo
               </div>
               <div className={`mt-1 text-xs font-semibold ${statusColorMap[slo.status]}`}>
                 사용률 {usedPct.toFixed(1)}%
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-gray-100 bg-gray-50 px-5 py-4">
-              <div className="text-xs text-gray-500">허용치 초과</div>
-              <div className="mt-1 text-3xl font-bold text-gray-900">
-                {overPct > 0 ? `+${overPct.toFixed(1)}%` : '0%'}
-              </div>
-              <div className="mt-1 text-xs text-gray-500">
-                허용 {slo.allowedDowntimeMinutes.toFixed(1)}분 · 실제{' '}
-                {slo.actualDowntimeMinutes.toFixed(1)}분
               </div>
             </div>
           </div>

@@ -6,7 +6,7 @@ import { HiXMark } from 'react-icons/hi2';
 import type { AgentRuntime, AgentSetupFormValues } from '@/types/agent-install';
 import RuntimeEnvironmentStep from './steps/RuntimeEnvironmentStep';
 import TelemetryTypeStep from './steps/TelemetryTypeStep';
-import LicenseKeyStep from './steps/LicenseKeyStep';
+import ServiceTokenStep from './steps/ServiceTokenStep';
 import InstallGuideStep from './steps/InstallGuideStep';
 import ValidationStep from './steps/ValidationStep';
 import { AGENTS, getDefaultAgentSetupValues } from '@/src/constants/agent-install';
@@ -16,7 +16,7 @@ interface AgentSetupPanelProps {
   onClose: () => void;
 }
 
-type SetupStep = 'runtime' | 'telemetry' | 'license' | 'guide' | 'validation';
+type SetupStep = 'runtime' | 'telemetry' | 'token' | 'guide' | 'validation';
 
 export default function AgentSetupPanel({ agentRuntime, onClose }: AgentSetupPanelProps) {
   const [currentStep, setCurrentStep] = useState<SetupStep>('runtime');
@@ -31,7 +31,7 @@ export default function AgentSetupPanel({ agentRuntime, onClose }: AgentSetupPan
   const agent = AGENTS.find((a) => a.id === agentRuntime);
   if (!agent) return null;
 
-  const stepSequence: SetupStep[] = ['runtime', 'telemetry', 'license', 'guide', 'validation'];
+  const stepSequence: SetupStep[] = ['runtime', 'telemetry', 'token', 'guide', 'validation'];
   const currentStepIndex = stepSequence.indexOf(currentStep);
 
   const scrollToTop = () => {
@@ -61,7 +61,7 @@ export default function AgentSetupPanel({ agentRuntime, onClose }: AgentSetupPan
   const stepLabels: Record<SetupStep, string> = {
     runtime: 'Runtime Env',
     telemetry: 'Telemetry',
-    license: 'License Key',
+    token: 'Service Token',
     guide: 'Install Guide',
     validation: 'Validation',
   };
@@ -176,8 +176,8 @@ export default function AgentSetupPanel({ agentRuntime, onClose }: AgentSetupPan
           />
         )}
 
-        {currentStep === 'license' && (
-          <LicenseKeyStep
+        {currentStep === 'token' && (
+          <ServiceTokenStep
             formValues={formValues}
             onChange={setFormValues}
             onNext={handleNext}
