@@ -255,6 +255,7 @@ export default function TraceAnalysis({ isOpen, onClose, traceId }: TraceAnalysi
         {selectedSpanId && data && (
           <TraceAnalysisPullUpPanel
             spanId={selectedSpanId}
+            traceId={traceId}
             spans={data.spans}
             logs={data.logs}
             onClose={() => setSelectedSpanId(null)}
