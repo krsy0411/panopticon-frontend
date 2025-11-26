@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { IoClose } from 'react-icons/io5';
 import PullUpPanelLayout from '@/components/ui/PullUpPanelLayout';
 import { LogEntry, LogLevel } from '@/types/apm';
 import LevelBadge from '@/components/features/services/[serviceName]/logs/LevelBadge';
 import { FiClock, FiTag, FiLink } from 'react-icons/fi';
 import { useOverlayStack } from '@/components/ui/OverlayStackContext';
+import Pagination from '@/components/features/services/Pagination';
 
 interface GroupShape {
   key: string;
@@ -22,8 +23,22 @@ interface Props {
 
 export default function LogGroupPanel({ isOpen, group, onClose }: Props) {
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 18;
   const overlayStack = useOverlayStack();
   const idRef = useRef<string | null>(null);
+
+  // 페이징된 아이템 계산
+  const paginatedItems = useMemo(() => {
+    if (!group) return [];
+    const start = (page - 1) * itemsPerPage;
+    return group.items.slice(start, start + itemsPerPage);
+  }, [group, page]);
+
+  const totalPages = useMemo(() => {
+    if (!group) return 1;
+    return Math.max(1, Math.ceil(group.items.length / itemsPerPage));
+  }, [group]);
 
   // Register/unregister with overlay stack for ESC key handling
   useEffect(() => {
@@ -77,9 +92,9 @@ export default function LogGroupPanel({ isOpen, group, onClose }: Props) {
           </button>
         </div>
 
-        <div className="p-6 relative h-[calc(100%-73px)] overflow-hidden">
+        <div className="p-6 relative h-[calc(100%-73px)] overflow-hidden flex flex-col">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto">
-            {group.items.map((it, idx) => (
+            {paginatedItems.map((it, idx) => (
               <div
                 key={`${it.service}-${it.timestamp}-${idx}`}
                 onClick={() => {
@@ -125,6 +140,16 @@ export default function LogGroupPanel({ isOpen, group, onClose }: Props) {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Pagination */}
+          <div className="mt-4 pt-4">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPrev={() => setPage(page - 1)}
+              onNext={() => setPage(page + 1)}
+            />
           </div>
 
           {selectedLog && (

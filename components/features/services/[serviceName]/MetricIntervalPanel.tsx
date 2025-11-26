@@ -10,9 +10,10 @@ import { IoClose } from 'react-icons/io5';
 import TraceAnalysis from '@/components/analysis/TraceAnalysis';
 import EndpointTraceAnalysis from '@/components/analysis/EndpointTraceAnalysis';
 import Dropdown from '@/components/ui/Dropdown';
-import LogGroups from '@/components/common/LogGroups';
+import LogGroups, { computeGroups } from '@/components/common/LogGroups';
 import LogGroupPanel from '@/components/common/LogGroupPanel';
 import StateHandler from '@/components/ui/StateHandler';
+import Pagination from '../Pagination';
 import type { GetServiceTracesResponse, GetSpansResponse, GetLogsResponse } from '@/types/apm';
 import SlideOverLayout from '@/components/ui/SlideOverLayout';
 import {
@@ -202,6 +203,10 @@ export default function MetricIntervalPanel({
     setSelectedMetric(selectedChartType);
   }, [selectedChartType]);
 
+  // 로그 그룹 페이징
+  const [logPage, setLogPage] = useState(1);
+  const logsPerPage = 12;
+
   const metricOptions = [
     { label: '요청수', value: 'requests' as const },
     { label: '에러율', value: 'error_rate' as const },
@@ -360,11 +365,21 @@ export default function MetricIntervalPanel({
                   >
                     <LogGroups
                       items={logEntries}
+                      page={logPage}
+                      pageSize={logsPerPage}
                       onGroupClick={(key, title, items) => {
                         setSelectedLogGroup({ key, title, items });
                         setIsLogGroupPanelOpen(true);
                       }}
                     />
+                    <div className="mt-4">
+                      <Pagination
+                        page={logPage}
+                        totalPages={Math.max(1, Math.ceil(computeGroups(logEntries).length / logsPerPage))}
+                        onPrev={() => setLogPage(logPage - 1)}
+                        onNext={() => setLogPage(logPage + 1)}
+                      />
+                    </div>
                   </StateHandler>
                 </div>
               </div>
