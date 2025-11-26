@@ -4,15 +4,15 @@ import dynamic from 'next/dynamic';
 import { useMemo } from 'react';
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
-// 차트 색상 팔레트 (7개 엔드포인트용)
+// 차트 색상 팔레트 (파란색 gradient, 상위 순서부터 진함)
 const DEFAULT_COLORS = [
-  '#537FE7',
-  '#5BC0BE',
-  '#FFB562',
-  '#F472B6',
-  '#A78BFA',
-  '#EC4899',
-  '#6366F1',
+  '#0D47A1', // 1순위: 진한 파란색
+  '#1565C0', // 2순위
+  '#1976D2', // 3순위
+  '#1E88E5', // 4순위
+  '#42A5F5', // 5순위
+  '#64B5F6', // 6순위
+  '#90CAF9', // 7순위: 연한 파란색
 ];
 
 interface EndpointItem {
@@ -117,10 +117,10 @@ export default function EndpointBarChart({
 
           const mainMetricValue =
             selectedMetric === 'requests'
-              ? `${sharePercent.toFixed(2)}%`
+              ? `${ep.request_count ?? 0}`
               : selectedMetric === 'error_rate'
               ? `${sharePercent.toFixed(2)}%`
-              : `${sharePercent.toFixed(2)}%`;
+              : `${baseValues[idx]?.toFixed(2) ?? 0} ms`;
 
           const errorRateText = errorRate !== null ? `${errorRate.toFixed(2)}%` : '-';
           const barColor = values[idx]?.itemStyle.color ?? '#fff';
@@ -134,7 +134,7 @@ export default function EndpointBarChart({
         },
       },
 
-      grid: { left: 50, right: 20, top: 30, bottom: 100 },
+      grid: { left: 50, right: 20, top: 30, bottom: 0 },
 
       xAxis: {
         type: 'category',

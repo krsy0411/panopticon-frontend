@@ -5,12 +5,20 @@ import dynamic from 'next/dynamic';
 import React, { useMemo } from 'react';
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
+// 파이차트용 5색 gradient (더 뚜렷한 차이)
+const PIE_CHART_COLORS = [
+  '#0D47A1', // 1순위: 진한 파란색
+  '#1565C0', // 2순위
+  '#2196F3', // 3순위: 표준 파란색
+  '#64B5F6', // 4순위
+  '#BBDEFB', // 5순위: 연한 파란색
+];
+
 interface EndpointItem {
   endpoint_name: string;
   request_count?: number;
   latency_p95_ms?: number;
   error_rate?: number;
-  color?: string; // Resources에서 넣어주는 색
 }
 
 interface Props {
@@ -29,14 +37,13 @@ export default function EndpointPieChart({
   colors,
 }: Props) {
   const pieOption = useMemo(() => {
-    const defaultColors = ['#537FE7', '#5BC0BE', '#FFB562', '#F472B6', '#A78BFA'];
-    const palette = colors && colors.length > 0 ? colors : defaultColors;
+    const palette = colors && colors.length > 0 ? colors : PIE_CHART_COLORS;
 
     const pieData = (items || []).map((ep, idx) => {
       let value: number = ep.request_count ?? 0;
       if (selectedMetric === 'error_rate') value = (ep.error_rate ?? 0) * 100;
       if (selectedMetric === 'latency') value = ep.latency_p95_ms ?? 0;
-      const itemColor = ep.color || palette[idx % palette.length];
+      const itemColor = palette[idx % palette.length];
       return {
         name: ep.endpoint_name,
         value,
