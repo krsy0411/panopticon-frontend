@@ -39,7 +39,7 @@ export default function EndpointTraceAnalysis({
   // sortOption에서 status 추출
   const status: TraceStatusFilter = sortOption === 'SLOW' ? 'SLOW' : 'ERROR';
 
-  // 트레이스 데이터 가져오기 (10초마다 폴링)
+  // 트레이스 데이터 가져오기 (3초마다 폴링)
   const {
     data: rawData,
     isLoading,
@@ -56,7 +56,7 @@ export default function EndpointTraceAnalysis({
     enabled: isOpen && !!serviceName && !!endpointName,
     refetchInterval: POLLING_INTERVAL,
     refetchIntervalInBackground: true,
-    staleTime: 2000, // 2초 동안은 fresh 상태 유지
+    staleTime: POLLING_INTERVAL - 500, // 약간의 여유를 두고 stale 처리
   });
 
   // sortOption에 따른 정렬

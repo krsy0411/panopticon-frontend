@@ -24,6 +24,26 @@ const getAuthServerUrl = (): string => {
 
 // ==================== Fetch 헬퍼 ====================
 
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+async function refreshAccessToken(): Promise<boolean> {
+  try {
+    const baseUrl = getAuthServerUrl();
+    const response = await fetch(`${baseUrl}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({}),
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('Token refresh failed:', error);
+    return false;
+  }
+}
+
 export async function fetchWithAuth<T>(url: string, options: RequestInit = {}): Promise<T> {
   const baseUrl = getAuthServerUrl();
   const fullUrl = `${baseUrl}${url}`;
@@ -33,11 +53,55 @@ export async function fetchWithAuth<T>(url: string, options: RequestInit = {}): 
     ...options.headers,
   };
 
-  const response = await fetch(fullUrl, {
+  let response = await fetch(fullUrl, {
     ...options,
     headers,
     credentials: 'include',
   });
+
+  // 401 (Unauthorized) 에러인 경우, 토큰 갱신 시도
+  if (response.status === 401) {
+    // 이미 갱신 중이면 그 결과를 기다림
+    if (isRefreshing) {
+      if (!refreshPromise) {
+        refreshPromise = refreshAccessToken();
+      }
+      const refreshed = await refreshPromise;
+      refreshPromise = null;
+      isRefreshing = false;
+
+      if (refreshed) {
+        // 토큰 갱신 성공 후 원래 요청 재시도
+        response = await fetch(fullUrl, {
+          ...options,
+          headers,
+          credentials: 'include',
+        });
+      } else {
+        // 토큰 갱신 실패 시 에러 발생
+        throw new Error('Failed to refresh authentication token');
+      }
+    } else {
+      // 첫 번째 갱신 시도
+      isRefreshing = true;
+      refreshPromise = refreshAccessToken();
+      const refreshed = await refreshPromise;
+      refreshPromise = null;
+      isRefreshing = false;
+
+      if (refreshed) {
+        // 토큰 갱신 성공 후 원래 요청 재시도
+        response = await fetch(fullUrl, {
+          ...options,
+          headers,
+          credentials: 'include',
+        });
+      } else {
+        // 토큰 갱신 실패 시 에러 발생
+        throw new Error('Failed to refresh authentication token');
+      }
+    }
+  }
 
   if (!response.ok) {
     let errorMessage = `HTTP error! status: ${response.status}`;

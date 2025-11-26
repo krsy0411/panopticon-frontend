@@ -6,7 +6,11 @@ import OverviewCharts from '@/components/features/services/[serviceName]/Overvie
 import { getServiceMetrics } from '@/src/api/apm';
 import { POLLING_INTERVAL, useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { convertTimeRangeToParams, getChartXAxisRange } from '@/src/utils/timeRange';
-import { getTimeAxisFormatter, getBarMaxWidthForTimeAxis } from '@/src/utils/chartFormatter';
+import {
+  getTimeAxisFormatter,
+  getBarMaxWidthForTimeAxis,
+  getXAxisInterval,
+} from '@/src/utils/chartFormatter';
 import { useSloMetricsMonitoring } from '@/src/hooks/useSloMetricsMonitoring';
 
 interface OverviewSectionProps {
@@ -103,10 +107,10 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
         fontSize: 11,
         formatter: getTimeAxisFormatter(interval),
         hideOverlap: true,
+        interval: getXAxisInterval(interval), // interval에 따른 일정한 라벨 간격
       },
       axisLine: { show: true, lineStyle: { color: '#9ca3af', width: 1 } },
       axisTick: { show: false },
-      splitNumber: 20, // 약 20개의 라벨 표시
     },
     yAxis: {
       type: 'value',
