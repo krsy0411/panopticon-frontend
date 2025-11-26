@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { HiXMark } from 'react-icons/hi2';
 import Dropdown from '@/components/ui/Dropdown';
@@ -80,13 +80,24 @@ export default function SloCreateModal({
   }, [editingData]);
 
   const [form, setForm] = useState<SloFormState>(() => getInitialForm());
+  const [targetInput, setTargetInput] = useState(String(getInitialForm().target));
   const [targetError, setTargetError] = useState('');
   const isEditMode = !!editingData;
 
+  // 시간 범위 생성
+  const timeRange = useMemo(() => {
+    const now = new Date();
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    return {
+      from: twoWeeksAgo.toISOString(),
+      to: now.toISOString(),
+    };
+  }, []);
+
   // 서비스 목록 조회
   const { data: servicesData, isLoading: servicesLoading } = useQuery({
-    queryKey: ['services'],
-    queryFn: () => getServices(),
+    queryKey: ['services', timeRange],
+    queryFn: () => getServices(timeRange),
     enabled: open, // 모달이 열릴 때만 쿼리 실행
   });
 
@@ -96,9 +107,12 @@ export default function SloCreateModal({
       value: service.service_name,
     })) || [];
 
-  // editingData가 변경될 때 form을 초기화
+  // editingData가 변경될 때 form과 targetInput을 초기화
   useEffect(() => {
-    setForm(getInitialForm());
+    const initialForm = getInitialForm();
+    setForm(initialForm);
+    setTargetInput(String(initialForm.target));
+    setTargetError('');
   }, [editingData, getInitialForm]);
 
   // 모달 열릴 때: DOM 업데이트만 (scroll, overflow)
@@ -143,11 +157,34 @@ export default function SloCreateModal({
   };
 
   const handleSubmit = () => {
+    // 목표값 검증
+    if (targetInput === '' || targetInput === '.') {
+      setTargetError('목표값을 입력해주세요.');
+      return;
+    }
+
+    const numValue = form.metric === 'latency' ? Number(targetInput) : parseFloat(targetInput);
+
+    // Latency 검증 (0 이상)
+    if (form.metric === 'latency') {
+      if (numValue < 0) {
+        setTargetError('0 이상의 값을 입력하세요.');
+        return;
+      }
+    } else {
+      // Availability, Error Rate 검증 (0~1)
+      if (numValue < 0 || numValue > 1) {
+        setTargetError('0 ~ 1 사이의 값을 입력하세요.');
+        return;
+      }
+    }
+
     const selectedTimeRange = timeRangeOptions.find((t) => t.value === form.timeRangeKey);
     const totalMinutes = selectedTimeRange?.minutes || defaultMinutes;
 
     onSubmit({
       ...form,
+      target: numValue,
       id: isEditMode ? form.id : crypto.randomUUID(),
       sliValue: isEditMode ? editingData?.sliValue ?? 0 : 0,
       actualDowntimeMinutes: isEditMode ? editingData?.actualDowntimeMinutes ?? 0 : 0,
@@ -308,23 +345,21 @@ export default function SloCreateModal({
             <input
               type="text"
               placeholder="숫자만 입력 가능합니다"
-              value={String(form.target)}
+              value={targetInput}
               onChange={(e) => {
                 const value = e.target.value;
 
                 if (value === '') {
-                  setTargetError('');
-                  handleChange('target', 0);
+                  setTargetInput('');
                   return;
                 }
 
-                if (!/^\d+(\.\d+)?$/.test(value)) {
-                  setTargetError('숫자만 입력 가능합니다.');
+                // 형식 체크만 (숫자/소수점만 허용)
+                if (!/^\d*\.?\d*$/.test(value)) {
                   return;
                 }
 
-                setTargetError('');
-                handleChange('target', isLatency ? Number(value) : parseFloat(value));
+                setTargetInput(value);
               }}
               className="
                 mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
