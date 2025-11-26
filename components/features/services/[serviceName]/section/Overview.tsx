@@ -18,7 +18,7 @@ interface OverviewSectionProps {
 }
 
 export default function OverviewSection({ serviceName }: OverviewSectionProps) {
-  // SLO 메트릭 모니터링 초기화 (3초 주기 폴링)
+  // SLO 메트릭 모니터링 초기화
   useSloMetricsMonitoring(serviceName);
 
   // Chart selection and layout moved to `OverviewCharts` component

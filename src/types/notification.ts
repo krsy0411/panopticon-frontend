@@ -39,6 +39,7 @@ export interface ComputedSlo extends BaseSloRecord {
   errorBudgetRemainingPct: number;
   errorBudgetOverPct: number;
   description?: string;
+  updatedAt?: string | Date;
 }
 
 export interface IntegrationStatus {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { IoClose } from 'react-icons/io5';
 import { useQuery } from '@tanstack/react-query';
 import { getEndpointTraces } from '@/src/api/apm';
@@ -8,6 +8,7 @@ import { TraceStatusFilter, EndpointTraceItem } from '@/types/apm';
 import { useTimeRangeStore, POLLING_INTERVAL } from '@/src/store/timeRangeStore';
 import StateHandler from '@/components/ui/StateHandler';
 import Dropdown from '@/components/ui/Dropdown';
+import Pagination from '@/components/features/services/Pagination';
 import Table, { TableColumn } from '@/components/ui/Table';
 import TraceAnalysis from './TraceAnalysis';
 import SlideOverLayout from '@/components/ui/SlideOverLayout';
@@ -34,6 +35,8 @@ export default function EndpointTraceAnalysis({
   // 상태 관리
   const [sortOption, setSortOption] = useState<SortOption>('SLOW');
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15; // 페이지당 15개
   const { startTime, endTime } = useTimeRangeStore();
 
   // sortOption에서 status 추출
@@ -51,7 +54,7 @@ export default function EndpointTraceAnalysis({
         status,
         from: startTime,
         to: endTime,
-        limit: 20,
+        limit: 200,
       }),
     enabled: isOpen && !!serviceName && !!endpointName,
     refetchInterval: POLLING_INTERVAL,
@@ -60,7 +63,7 @@ export default function EndpointTraceAnalysis({
   });
 
   // sortOption에 따른 정렬
-  const data = rawData
+  const allData = rawData
     ? [...rawData].sort((a, b) => {
         if (sortOption === 'ERROR_SLOW' || sortOption === 'SLOW') {
           // 느린순: durationMs 기준 내림차순
@@ -72,6 +75,18 @@ export default function EndpointTraceAnalysis({
         return 0;
       })
     : rawData;
+
+  // 전체 개수 계산
+  const totalCount = allData?.length || 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
+
+  // 현재 페이지의 데이터만 추출
+  const data = useMemo(() => {
+    if (!allData) return [];
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return allData.slice(startIndex, endIndex);
+  }, [allData, currentPage]);
 
   // ESC 키로 닫기
   useEffect(() => {
@@ -113,6 +128,19 @@ export default function EndpointTraceAnalysis({
   // TraceAnalysis 닫기 핸들러
   const handleTraceAnalysisClose = () => {
     setSelectedTraceId(null);
+  };
+
+  // 페이지네이션 핸들러
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
   };
 
   // 테이블 컬럼 정의
@@ -227,6 +255,14 @@ export default function EndpointTraceAnalysis({
                   className="w-full"
                 />
               )}
+
+              {/* Pagination */}
+              <Pagination
+                page={currentPage}
+                totalPages={totalPages}
+                onPrev={handlePrevPage}
+                onNext={handleNextPage}
+              />
             </div>
           </StateHandler>
         </div>

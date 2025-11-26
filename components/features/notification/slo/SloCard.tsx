@@ -83,7 +83,6 @@ const statusColorMap = {
 
 export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: SloCardProps) {
   const usedPct = slo.errorBudgetUsedRate * 100;
-  const remainingPct = Math.max(0, slo.errorBudgetRemainingPct);
   const overPct = Math.max(0, slo.errorBudgetOverPct);
 
   const [active, setActive] = useState(enabled);
@@ -92,22 +91,67 @@ export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: Slo
   const isLatency = slo.metric === 'latency';
   const isPercentageMetric = slo.metric === 'availability' || slo.metric === 'error_rate';
 
-  // SLI 값 포맷팅 (availability/error_rate는 %로, latency는 ms로)
-  const formatSliValue = (value: number): string => {
+  // 모니터링 기간 계산 (updatedAt 기준으로 과거 N분)
+  const getMonitoringPeriod = () => {
+    const endDate = slo.updatedAt ? new Date(slo.updatedAt) : new Date();
+    const startDate = new Date(endDate.getTime() - slo.totalMinutes * 60 * 1000);
+
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('ko-KR', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    return {
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
+    };
+  };
+
+  // SLI 값 포맷팅
+  const formatSliValue = (value: number): React.ReactNode => {
     if (isPercentageMetric) {
-      return `${(value * 100).toFixed(2)}%`;
+      // availability/error_rate: 백분율 표시
+      return (
+        <>
+          {(value * 100).toFixed(2)}
+          <span className="text-sm">%</span>
+        </>
+      );
     } else if (isLatency) {
-      return `${value.toFixed(0)}ms`;
+      // latency: sliValue = metricValue / target
+      // 따라서 metricValue = target * sliValue
+      const measuredLatency = slo.target * value;
+      return (
+        <>
+          {Math.round(measuredLatency)}
+          <span className="text-sm">ms</span>
+        </>
+      );
     }
     return `${value.toFixed(2)}`;
   };
 
   // 목표값 포맷팅
-  const formatTargetValue = (value: number): string => {
+  const formatTargetValue = (value: number): React.ReactNode => {
     if (isPercentageMetric) {
-      return `${Math.round(value * 10000) / 100}%`;
+      return (
+        <>
+          {Math.round(value * 10000) / 100}
+          <span className="text-sm">%</span>
+        </>
+      );
     } else if (isLatency) {
-      return `${Math.round(value)}ms`;
+      // latency는 ms 단위로 표시
+      return (
+        <>
+          {Math.round(value)}
+          <span className="text-sm">ms</span>
+        </>
+      );
     }
     return `${value.toFixed(2)}`;
   };
@@ -201,48 +245,73 @@ export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: Slo
           {/* 중단 지표 */}
           <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-xl border border-gray-100 bg-gray-50 px-5 py-4">
-              <div className="text-xs text-gray-500">SLI(지표)</div>
+              <div className="text-xs text-gray-500">목표 설정값(SLO)</div>
               <div className="mt-1 text-3xl font-bold text-gray-900">
-                {formatSliValue(slo.sliValue)}
+                {formatTargetValue(slo.target)}
               </div>
-              <div className="mt-1 text-xs text-gray-500">목표 {formatTargetValue(slo.target)}</div>
             </div>
 
             <div className="rounded-xl border border-gray-100 bg-gray-50 px-5 py-4">
-              <div className="text-xs text-gray-500">남은 허용치</div>
+              <div className="text-xs text-gray-500">측정된 지표(SLI)</div>
               <div className="mt-1 text-3xl font-bold text-gray-900">
-                {remainingPct.toFixed(1)}%
+                {formatSliValue(slo.sliValue)}
               </div>
-              <div className={`mt-1 text-xs font-semibold ${statusColorMap[slo.status]}`}>
-                사용률 {usedPct.toFixed(1)}%
-              </div>
+            </div>
+          </div>
+
+          {/* 모니터링 기간 */}
+          <div className="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-3">
+            <div className="text-xs font-semibold text-gray-600 mb-1">모니터링 기간</div>
+            <div className="text-sm text-gray-700">
+              {getMonitoringPeriod().startDate} ~ {getMonitoringPeriod().endDate}
             </div>
           </div>
 
           {/* Progress Bar */}
           <div className="mt-5 space-y-2">
-            <div className="flex justify-between items-center text-sm font-semibold text-gray-800">
-              <span>허용치</span>
-              <span className={statusColorMap[slo.status]}>사용률 {usedPct.toFixed(1)}%</span>
-            </div>
-
-            <div className="h-3 w-full rounded-full bg-gray-200 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ${
-                  slo.status === 'FAILED'
-                    ? 'bg-red-500'
-                    : slo.status === 'WARNING'
-                    ? 'bg-yellow-500'
-                    : 'bg-green-500'
-                }`}
-                style={{ width: `${Math.min(100, usedPct)}%` }}
-              />
-            </div>
-
-            {overPct > 0 && (
-              <div className="text-xs font-semibold text-red-600">
-                허용치 초과 +{overPct.toFixed(1)}%
-              </div>
+            {isLatency ? (
+              <>
+                <div className="flex justify-between items-center text-sm font-semibold text-gray-800">
+                  <span>SLO 대비 SLI</span>
+                  <span className={statusColorMap[slo.status]}>{(slo.sliValue * 100).toFixed(1)}%</span>
+                </div>
+                <div className="h-3 w-full rounded-full bg-gray-200 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      slo.status === 'FAILED'
+                        ? 'bg-red-500'
+                        : slo.status === 'WARNING'
+                        ? 'bg-yellow-500'
+                        : 'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.min(100, slo.sliValue * 100)}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between items-center text-sm font-semibold text-gray-800">
+                  <span>허용치</span>
+                  <span className={statusColorMap[slo.status]}>사용률 {usedPct.toFixed(1)}%</span>
+                </div>
+                <div className="h-3 w-full rounded-full bg-gray-200 overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      slo.status === 'FAILED'
+                        ? 'bg-red-500'
+                        : slo.status === 'WARNING'
+                        ? 'bg-yellow-500'
+                        : 'bg-green-500'
+                    }`}
+                    style={{ width: `${Math.min(100, usedPct)}%` }}
+                  />
+                </div>
+                {overPct > 0 && (
+                  <div className="text-xs font-semibold text-red-600">
+                    허용치 초과 +{overPct.toFixed(1)}%
+                  </div>
+                )}
+              </>
             )}
           </div>
         </>

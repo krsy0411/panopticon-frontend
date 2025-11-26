@@ -5,12 +5,20 @@ import dynamic from 'next/dynamic';
 import React, { useMemo } from 'react';
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
+// 파이차트용 5색 rainbow palette (빨주노초파, 포화도 낮춤)
+const PIE_CHART_COLORS = [
+  '#E57373', // 1순위: 빨강
+  '#FFB74D', // 2순위: 주황
+  '#FDD835', // 3순위: 노랑
+  '#81C784', // 4순위: 초록
+  '#64B5F6', // 5순위: 파랑
+];
+
 interface EndpointItem {
   endpoint_name: string;
   request_count?: number;
   latency_p95_ms?: number;
   error_rate?: number;
-  color?: string; // Resources에서 넣어주는 색
 }
 
 interface Props {
@@ -29,14 +37,13 @@ export default function EndpointPieChart({
   colors,
 }: Props) {
   const pieOption = useMemo(() => {
-    const defaultColors = ['#537FE7', '#5BC0BE', '#FFB562', '#F472B6', '#A78BFA'];
-    const palette = colors && colors.length > 0 ? colors : defaultColors;
+    const palette = colors && colors.length > 0 ? colors : PIE_CHART_COLORS;
 
     const pieData = (items || []).map((ep, idx) => {
       let value: number = ep.request_count ?? 0;
       if (selectedMetric === 'error_rate') value = (ep.error_rate ?? 0) * 100;
       if (selectedMetric === 'latency') value = ep.latency_p95_ms ?? 0;
-      const itemColor = ep.color || palette[idx % palette.length];
+      const itemColor = palette[idx % palette.length];
       return {
         name: ep.endpoint_name,
         value,
@@ -68,8 +75,11 @@ export default function EndpointPieChart({
           const errorRateText = errorRate !== null ? `${errorRate.toFixed(2)}%` : '-';
           const requestsText = requests.toLocaleString();
 
+          // 슬라이스 색상 가져오기
+          const itemColor = params.data?.itemStyle?.color || params.color || '#537FE7';
+
           return `
-            <div style="font-weight:700;margin-bottom:6px;font-size:24px;line-height:1.2;">${name}</div>
+            <div style="font-weight:700;margin-bottom:6px;font-size:24px;line-height:1.2;color:${itemColor};">${name}</div>
             <div style="line-height:1.2;font-size:20px;">요청수: ${requestsText}</div>
             <div style="line-height:1.2;font-size:20px;">에러율: ${errorRateText}</div>
             <div style="line-height:1.2;font-size:20px;">지연시간: ${p95.toFixed(2)} ms</div>

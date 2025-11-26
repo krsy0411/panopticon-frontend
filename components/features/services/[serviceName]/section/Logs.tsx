@@ -52,7 +52,7 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
   const [page, setPage] = useState(1);
 
   // 그룹 기반 페이징: 한 페이지에 표시할 그룹 수
-  const groupsPerPage = 18;
+  const groupsPerPage = 12;
 
   // 기본 태그 없음
   const [tags, setTags] = useState<Tag[]>([]);

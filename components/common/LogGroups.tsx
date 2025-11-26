@@ -153,7 +153,7 @@ export default function LogGroups({ items, maxGroups = 20, page, pageSize, onGro
             role="button"
             onClick={() => onGroupClick && onGroupClick(g.key, g.title, g.items)}
             // 왼쪽 테두리 색상을 레벨에 따라 변경
-            className={`border border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer bg-white border-l-4 h-40 flex flex-col ${
+            className={`border border-gray-200 rounded-lg p-4 hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer bg-white border-l-4 min-h-24 flex flex-col ${
               g.primaryLevel === 'ERROR'
                 ? 'border-l-red-500'
                 : g.primaryLevel === 'WARN' || g.primaryLevel === 'WARNING'
@@ -167,7 +167,7 @@ export default function LogGroups({ items, maxGroups = 20, page, pageSize, onGro
           >
             <div className="flex flex-col items-start justify-between h-full">
               <div className="flex-1 overflow-hidden">
-                <div className="text-sm font-medium text-gray-800 wrap-break-word line-clamp-3">
+                <div className="text-sm font-medium text-gray-800 wrap-break-word line-clamp-1">
                   {g.title}
                 </div>
                 <div className="flex gap-2 mt-2">

@@ -10,7 +10,7 @@ import type { SloMetric } from '@/src/types/notification';
 /**
  * 메트릭 값을 SLI(0~1 범위)로 변환
  *
- * - latency: 타겟 이하면 1.0, 초과하면 0.0
+ * - latency: 측정값과 target의 비율 (target / metricValue)
  * - error_rate: 1 - errorRate (이미 0~1 범위)
  * - availability: 1 - errorRate와 동일
  */
@@ -21,8 +21,10 @@ export function calculateSliFromMetric(
 ): number {
   switch (metric) {
     case 'latency':
-      // latency_p95_ms: 타겟 이하면 GOOD (sliValue = 1.0)
-      return metricValue <= target ? 1.0 : 0.0;
+      // latency: metricValue / target 비율 (실제값 / 목표값)
+      // 예: target=200ms, 측정값=150ms → 150/200 = 0.75 (75% 달성)
+      // 예: target=200ms, 측정값=250ms → 250/200 = 1.25 (125%, 목표 초과)
+      return Math.max(metricValue, 0) / Math.max(target, 1);
 
     case 'error_rate':
       // error_rate는 이미 0~1 범위
