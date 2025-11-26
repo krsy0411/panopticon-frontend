@@ -41,25 +41,41 @@ const getKindColor = (kind: string) => {
   }
 };
 
+// Log level에 따른 색상
+const getLogLevelColor = (level: string) => {
+  switch (level) {
+    case 'ERROR':
+      return 'text-red-700 bg-red-50 border-red-200';
+    case 'WARN':
+      return 'text-yellow-700 bg-yellow-50 border-yellow-200';
+    case 'INFO':
+      return 'text-blue-700 bg-blue-50 border-blue-200';
+    case 'DEBUG':
+      return 'text-gray-700 bg-gray-50 border-gray-200';
+    default:
+      return 'text-gray-700 bg-gray-50 border-gray-200';
+  }
+};
+
 const JsonRenderer = ({ data }: { data: Record<string, unknown> }) => {
   const renderValue = (value: unknown, depth: number = 0): React.ReactNode => {
     const indent = '  '.repeat(depth);
     const nextIndent = '  '.repeat(depth + 1);
 
     if (value === null) {
-      return <span className="text-yellow-400">null</span>;
+      return <span className="text-amber-600">null</span>;
     }
 
     if (typeof value === 'boolean') {
-      return <span className="text-yellow-400">{String(value)}</span>;
+      return <span className="text-amber-600">{String(value)}</span>;
     }
 
     if (typeof value === 'number') {
-      return <span className="text-cyan-400">{value}</span>;
+      return <span className="text-blue-600">{value}</span>;
     }
 
     if (typeof value === 'string') {
-      return <span className="text-green-400">&quot;{value}&quot;</span>;
+      return <span className="text-green-600">&quot;{value}&quot;</span>;
     }
 
     if (Array.isArray(value)) {
@@ -91,8 +107,8 @@ const JsonRenderer = ({ data }: { data: Record<string, unknown> }) => {
           {entries.map(([k, v], index) => (
             <div key={k}>
               {nextIndent}
-              <span className="text-blue-400">&quot;{k}&quot;</span>
-              <span className="text-gray-300">: </span>
+              <span className="text-blue-700">&quot;{k}&quot;</span>
+              <span className="text-gray-600">: </span>
               {renderValue(v, depth + 1)}
               {index < entries.length - 1 ? ',' : ''}
               {'\n'}
@@ -108,7 +124,7 @@ const JsonRenderer = ({ data }: { data: Record<string, unknown> }) => {
   };
 
   return (
-    <div className="text-xs font-mono text-gray-100 whitespace-pre-wrap wrap-break-word">
+    <div className="text-xs font-mono text-gray-800 whitespace-pre-wrap wrap-break-word">
       {renderValue(data)}
     </div>
   );
@@ -345,13 +361,22 @@ export default function TraceAnalysisPullUpPanel({
         {activeTab === 'logs' && (
           <div>
             {relatedLogs.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {relatedLogs.map((log, index) => (
-                  <div
-                    key={index}
-                    className="p-4 bg-gray-900 rounded-lg overflow-x-auto"
-                  >
-                    <JsonRenderer data={log as unknown as Record<string, unknown>} />
+                  <div key={index} className="rounded-lg overflow-hidden bg-gray-100">
+                    {/* Log Level Header */}
+                    <div className={`px-4 py-3 ${getLogLevelColor(log.level)}`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold">{log.level}</span>
+                        <span className="text-xs text-gray-600">
+                          {new Date(log.timestamp).toLocaleString('ko-KR')}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Log Content */}
+                    <div className="p-4 bg-slate-50">
+                      <JsonRenderer data={log as unknown as Record<string, unknown>} />
+                    </div>
                   </div>
                 ))}
               </div>
