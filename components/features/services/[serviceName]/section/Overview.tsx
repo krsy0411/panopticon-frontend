@@ -6,7 +6,11 @@ import OverviewCharts from '@/components/features/services/[serviceName]/Overvie
 import { getServiceMetrics } from '@/src/api/apm';
 import { POLLING_INTERVAL, useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { convertTimeRangeToParams, getChartXAxisRange } from '@/src/utils/timeRange';
-import { getTimeAxisFormatter, getBarMaxWidthForTimeAxis, getXAxisInterval } from '@/src/utils/chartFormatter';
+import {
+  getTimeAxisFormatter,
+  getBarMaxWidthForTimeAxis,
+  getXAxisInterval,
+} from '@/src/utils/chartFormatter';
 import { useSloMetricsMonitoring } from '@/src/hooks/useSloMetricsMonitoring';
 
 interface OverviewSectionProps {
