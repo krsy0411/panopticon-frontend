@@ -210,6 +210,7 @@ export default function EndpointBarChart({
       series: values.map((val, idx) => ({
         type: 'bar',
         name: val.name,
+        id: val.name, // 엔드포인트 이름을 고유 ID로 사용
         barWidth: '40%',
         barGap: '-150%',
         data: Array(items.length)

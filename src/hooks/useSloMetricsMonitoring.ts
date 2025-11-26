@@ -222,7 +222,7 @@ export function useSloMetricsMonitoring(serviceName: string) {
     };
 
     updateSloAndAlert();
-  }, [metrics, slos, getMetricValue, dispatchAlert]);
+  }, [metrics, slos, webhooks]);
 
   return {
     monitoringState,
