@@ -41,20 +41,77 @@ const getKindColor = (kind: string) => {
   }
 };
 
-// Log Level에 따른 색상
-const getLogLevelColor = (level: string) => {
-  switch (level) {
-    case 'ERROR':
-      return 'text-red-600 bg-red-50';
-    case 'WARN':
-      return 'text-yellow-600 bg-yellow-50';
-    case 'INFO':
-      return 'text-blue-600 bg-blue-50';
-    case 'DEBUG':
-      return 'text-gray-600 bg-gray-50';
-    default:
-      return 'text-gray-600 bg-gray-50';
-  }
+const JsonRenderer = ({ data }: { data: Record<string, unknown> }) => {
+  const renderValue = (value: unknown, depth: number = 0): React.ReactNode => {
+    const indent = '  '.repeat(depth);
+    const nextIndent = '  '.repeat(depth + 1);
+
+    if (value === null) {
+      return <span className="text-yellow-400">null</span>;
+    }
+
+    if (typeof value === 'boolean') {
+      return <span className="text-yellow-400">{String(value)}</span>;
+    }
+
+    if (typeof value === 'number') {
+      return <span className="text-cyan-400">{value}</span>;
+    }
+
+    if (typeof value === 'string') {
+      return <span className="text-green-400">&quot;{value}&quot;</span>;
+    }
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) return '[]';
+      return (
+        <>
+          {'[\n'}
+          {value.map((item, index) => (
+            <div key={index}>
+              {nextIndent}
+              {renderValue(item, depth + 1)}
+              {index < value.length - 1 ? ',' : ''}
+              {'\n'}
+            </div>
+          ))}
+          {indent}
+          {']'}
+        </>
+      );
+    }
+
+    if (typeof value === 'object') {
+      const entries = Object.entries(value);
+      if (entries.length === 0) return '{}';
+      return (
+        <>
+          {'{'}
+          {'\n'}
+          {entries.map(([k, v], index) => (
+            <div key={k}>
+              {nextIndent}
+              <span className="text-blue-400">&quot;{k}&quot;</span>
+              <span className="text-gray-300">: </span>
+              {renderValue(v, depth + 1)}
+              {index < entries.length - 1 ? ',' : ''}
+              {'\n'}
+            </div>
+          ))}
+          {indent}
+          {'}'}
+        </>
+      );
+    }
+
+    return String(value);
+  };
+
+  return (
+    <div className="text-xs font-mono text-gray-100 whitespace-pre-wrap wrap-break-word">
+      {renderValue(data)}
+    </div>
+  );
 };
 
 export default function TraceAnalysisPullUpPanel({
@@ -292,34 +349,9 @@ export default function TraceAnalysisPullUpPanel({
                 {relatedLogs.map((log, index) => (
                   <div
                     key={index}
-                    className="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2"
+                    className="p-4 bg-gray-900 rounded-lg overflow-x-auto"
                   >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`inline-block px-2 py-1 text-xs font-medium rounded ${getLogLevelColor(
-                          log.level,
-                        )}`}
-                      >
-                        {log.level}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(log.timestamp).toLocaleString('ko-KR')}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-900 wrap-break-word">{log.message}</p>
-                    {log.labels && Object.keys(log.labels).length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-2 border-t border-gray-200">
-                        {Object.entries(log.labels).map(([key, value]) => (
-                          <span
-                            key={key}
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-white rounded text-xs"
-                          >
-                            <span className="font-medium text-gray-600">{key}:</span>
-                            <span className="text-gray-500">{value}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <JsonRenderer data={log as unknown as Record<string, unknown>} />
                   </div>
                 ))}
               </div>
