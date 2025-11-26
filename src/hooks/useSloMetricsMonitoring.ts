@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -221,7 +222,7 @@ export function useSloMetricsMonitoring(serviceName: string) {
     };
 
     updateSloAndAlert();
-  }, [metrics, slos, getMetricValue, dispatchAlert, monitoringState]);
+  }, [metrics, slos, getMetricValue, dispatchAlert]);
 
   return {
     monitoringState,
