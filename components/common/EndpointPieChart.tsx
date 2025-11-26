@@ -5,13 +5,13 @@ import dynamic from 'next/dynamic';
 import React, { useMemo } from 'react';
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
-// 파이차트용 5색 gradient (더 뚜렷한 차이)
+// 파이차트용 5색 rainbow palette (빨주노초파, 포화도 낮춤)
 const PIE_CHART_COLORS = [
-  '#0D47A1', // 1순위: 진한 파란색
-  '#1565C0', // 2순위
-  '#2196F3', // 3순위: 표준 파란색
-  '#64B5F6', // 4순위
-  '#BBDEFB', // 5순위: 연한 파란색
+  '#E57373', // 1순위: 빨강
+  '#FFB74D', // 2순위: 주황
+  '#FDD835', // 3순위: 노랑
+  '#81C784', // 4순위: 초록
+  '#64B5F6', // 5순위: 파랑
 ];
 
 interface EndpointItem {

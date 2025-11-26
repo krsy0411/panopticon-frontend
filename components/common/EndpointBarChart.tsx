@@ -4,15 +4,15 @@ import dynamic from 'next/dynamic';
 import { useMemo } from 'react';
 const ReactECharts = dynamic(() => import('echarts-for-react'), { ssr: false });
 
-// 차트 색상 팔레트 (파란색 gradient, 상위 순서부터 진함)
+// 차트 색상 팔레트 (rainbow: 빨주노초파남보, 포화도 낮춤)
 const DEFAULT_COLORS = [
-  '#0D47A1', // 1순위: 진한 파란색
-  '#1565C0', // 2순위
-  '#1976D2', // 3순위
-  '#1E88E5', // 4순위
-  '#42A5F5', // 5순위
-  '#64B5F6', // 6순위
-  '#90CAF9', // 7순위: 연한 파란색
+  '#E57373', // 1순위: 빨강
+  '#FFB74D', // 2순위: 주황
+  '#FDD835', // 3순위: 노랑
+  '#81C784', // 4순위: 초록
+  '#64B5F6', // 5순위: 파랑
+  '#7986CB', // 6순위: 남색
+  '#BA68C8', // 7순위: 보라
 ];
 
 interface EndpointItem {
