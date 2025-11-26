@@ -167,9 +167,19 @@ export function useSloMetricsMonitoring(serviceName: string) {
           const newSliValue = calculateSliFromMetric(slo.metric, metricValue, slo.target);
 
           // actualDowntimeMinutes 계산
-          // SLI가 목표 미만이면 1분 추가 (폴링 주기 = 1분)
-          const actualDowntimeMinutes =
-            newSliValue < slo.target ? slo.actualDowntimeMinutes + 1 : slo.actualDowntimeMinutes;
+          // 메트릭 타입에 따라 목표 달성 판단
+          let isGoalMet: boolean;
+          if (slo.metric === 'latency') {
+            // latency: 측정값 <= target이면 목표 달성
+            isGoalMet = metricValue <= slo.target;
+          } else {
+            // error_rate, availability: sliValue >= target이면 목표 달성
+            isGoalMet = newSliValue >= slo.target;
+          }
+
+          const actualDowntimeMinutes = !isGoalMet
+            ? slo.actualDowntimeMinutes + 1
+            : slo.actualDowntimeMinutes;
 
           // 상태 판정
           const newStatus = deriveSloStatus(newSliValue, slo.target);

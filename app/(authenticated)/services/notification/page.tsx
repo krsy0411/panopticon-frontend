@@ -40,14 +40,31 @@ interface ConnectionState {
 }
 
 /**
- * SLO 상태 판정: 에러 허용치 사용률에 따라 결정
- * - GOOD: 허용치 사용률 50% 이하 (남은 허용치 50% 이상)
- * - WARNING: 허용치 사용률 50~90% (남은 허용치 10~50%)
- * - FAILED: 허용치 사용률 90% 초과 (남은 허용치 10% 미만)
+ * SLO 상태 판정: 메트릭 타입에 따라 다르게 결정
+ *
+ * latency (낮을수록 좋음):
+ * - sliValue = metricValue / target
+ * - GOOD: sliValue <= 1.0 (p95 <= target, 목표 달성)
+ * - WARNING: 1.0 < sliValue <= 1.5 (p95 > target 하지만 허용 범위)
+ * - FAILED: sliValue > 1.5 (p95 > target × 1.5, 목표 심각하게 초과)
+ *
+ * error_rate/availability (높을수록 좋음, 허용치 기반):
+ * - GOOD: 허용치 사용률 50% 이하
+ * - WARNING: 허용치 사용률 50~90%
+ * - FAILED: 허용치 사용률 90% 초과
  */
-const deriveStatus = (errorBudgetUsedRate: number) => {
-  const usedPercent = errorBudgetUsedRate * 100;
+const deriveStatus = (sliValueOrRate: number, metric?: string) => {
+  if (metric === 'latency') {
+    // latency: sliValue = metricValue / target (낮을수록 좋음)
+    // sliValue <= 1.0 → metricValue <= target = 목표 달성
+    // sliValue > 1.0 → metricValue > target = 목표 초과
+    if (sliValueOrRate <= 1.0) return 'GOOD' as const;
+    if (sliValueOrRate <= 1.5) return 'WARNING' as const;
+    return 'FAILED' as const;
+  }
 
+  // error_rate, availability
+  const usedPercent = sliValueOrRate * 100;
   if (usedPercent <= 50) return 'GOOD' as const;
   if (usedPercent <= 90) return 'WARNING' as const;
   return 'FAILED' as const;
@@ -178,7 +195,11 @@ export default function NotificationPage() {
   const computeSlo = useCallback((input: SloCreateInput): ComputedSlo => {
     // SLO 생성 시 지정된 totalMinutes 사용 (필수)
     const totalMinutes = input.totalMinutes || 60 * 24; // 기본값: 24시간
-    const errorBudget = 1 - input.sliValue;
+
+    // 메트릭 타입에 따라 errorBudget 계산
+    // - latency: 이진값(sliValue)을 기반으로 계산
+    // - availability/error_rate: 목표값(target)을 기반으로 계산
+    const errorBudget = input.metric === 'latency' ? 1 - input.sliValue : 1 - input.target;
     const allowedDowntime = totalMinutes * errorBudget;
     const usedRate = allowedDowntime === 0 ? 0 : input.actualDowntimeMinutes / allowedDowntime;
     return {
@@ -194,7 +215,7 @@ export default function NotificationPage() {
       errorBudgetUsedRate: usedRate,
       errorBudgetRemainingPct: Math.max(0, (1 - usedRate) * 100),
       errorBudgetOverPct: Math.max(0, usedRate * 100 - 100),
-      status: deriveStatus(usedRate),
+      status: deriveStatus(input.metric === 'latency' ? input.sliValue : usedRate, input.metric),
       connectedChannels: input.connectedChannels,
       description: input.description,
       trend: [],

@@ -16,11 +16,17 @@ interface SloCreateModalProps {
   editingData?: SloCreateInput | null;
 }
 
-const timeRangeOptions: { label: string; value: TimeRangeKey; minutes: number }[] = [
+const presetTimeRanges: { label: string; value: TimeRangeKey; minutes: number }[] = [
   { label: '1시간', value: '1h', minutes: 60 },
   { label: '24시간', value: '24h', minutes: 60 * 24 },
   { label: '7일', value: '7d', minutes: 60 * 24 * 7 },
   { label: '30일', value: '30d', minutes: 60 * 24 * 30 },
+];
+
+const timeUnitOptions = [
+  { label: '시간', value: 'hour' as const },
+  { label: '일', value: 'day' as const },
+  { label: '주', value: 'week' as const },
 ];
 
 const metricOptions = [
@@ -52,6 +58,8 @@ export default function SloCreateModal({
     target: number;
     timeRangeKey: TimeRangeKey;
     connectedChannels: IntegrationType[];
+    customValue?: number;
+    customUnit?: 'hour' | 'day' | 'week';
   };
 
   const getInitialForm = useCallback((): SloFormState => {
@@ -82,6 +90,9 @@ export default function SloCreateModal({
   const [form, setForm] = useState<SloFormState>(() => getInitialForm());
   const [targetInput, setTargetInput] = useState(String(getInitialForm().target));
   const [targetError, setTargetError] = useState('');
+  const [useCustomRange, setUseCustomRange] = useState(false);
+  const [customValue, setCustomValue] = useState<string>('');
+  const [customUnit, setCustomUnit] = useState<'hour' | 'day' | 'week'>('day');
   const isEditMode = !!editingData;
 
   // 시간 범위 생성
@@ -179,8 +190,23 @@ export default function SloCreateModal({
       }
     }
 
-    const selectedTimeRange = timeRangeOptions.find((t) => t.value === form.timeRangeKey);
-    const totalMinutes = selectedTimeRange?.minutes || defaultMinutes;
+    let totalMinutes = defaultMinutes;
+    const selectedTimeRangeKey: TimeRangeKey = form.timeRangeKey;
+
+    if (useCustomRange) {
+      // 커스텀 기간 검증
+      if (!customValue || isNaN(Number(customValue)) || Number(customValue) <= 0) {
+        setTargetError('유효한 기간을 입력하세요.');
+        return;
+      }
+
+      const unitMultipliers = { hour: 60, day: 60 * 24, week: 60 * 24 * 7 };
+      totalMinutes = Number(customValue) * unitMultipliers[customUnit];
+    } else {
+      // 사전설정된 기간 사용
+      const selectedTimeRange = presetTimeRanges.find((t) => t.value === form.timeRangeKey);
+      totalMinutes = selectedTimeRange?.minutes || defaultMinutes;
+    }
 
     onSubmit({
       ...form,
@@ -189,7 +215,7 @@ export default function SloCreateModal({
       sliValue: isEditMode ? editingData?.sliValue ?? 0 : 0,
       actualDowntimeMinutes: isEditMode ? editingData?.actualDowntimeMinutes ?? 0 : 0,
       totalMinutes,
-      timeRangeKey: form.timeRangeKey,
+      timeRangeKey: selectedTimeRangeKey,
     } as SloCreateInput);
   };
 
@@ -299,13 +325,76 @@ export default function SloCreateModal({
           {/* TIME RANGE / WINDOW */}
           <div>
             <label className="text-sm font-semibold text-gray-800">모니터링 기간</label>
-            <Dropdown
-              value={form.timeRangeKey}
-              onChange={(value: TimeRangeKey) => handleChange('timeRangeKey', value)}
-              options={timeRangeOptions.map((t) => ({ label: t.label, value: t.value }))}
-              className="mt-2 w-full"
-            />
-            <p className="text-xs text-gray-500 mt-1">이 SLO를 평가할 시간 범위를 선택하세요.</p>
+
+            {/* 탭: 사전설정 / 커스텀 */}
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setUseCustomRange(false);
+                  setTargetError('');
+                }}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                  !useCustomRange
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                사전설정
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUseCustomRange(true);
+                  setTargetError('');
+                }}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                  useCustomRange
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                커스텀
+              </button>
+            </div>
+
+            {/* 사전설정 옵션 */}
+            {!useCustomRange && (
+              <div className="mt-3">
+                <Dropdown
+                  value={form.timeRangeKey}
+                  onChange={(value: TimeRangeKey) => handleChange('timeRangeKey', value)}
+                  options={presetTimeRanges.map((t) => ({ label: t.label, value: t.value }))}
+                  className="w-full"
+                />
+              </div>
+            )}
+
+            {/* 커스텀 옵션 */}
+            {useCustomRange && (
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  value={customValue}
+                  onChange={(e) => setCustomValue(e.target.value)}
+                  placeholder="예: 3"
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                />
+                <div className="w-24">
+                  <Dropdown
+                    value={customUnit}
+                    onChange={(value: 'hour' | 'day' | 'week') => setCustomUnit(value)}
+                    options={timeUnitOptions.map((unit) => ({ label: unit.label, value: unit.value }))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs text-gray-500 mt-2">
+              {useCustomRange ? '원하는 기간을 입력하세요.' : '이 SLO를 평가할 시간 범위를 선택하세요.'}
+            </p>
           </div>
 
           {/* CHANNELS */}
