@@ -20,9 +20,6 @@ const TOTAL_ENDPOINTS_LIMIT = 200;
 
 type MetricType = 'requests' | 'latency' | 'error_rate';
 
-// pie/bar 공통 팔레트 (상위 7개 엔드포인트용)
-const CHART_COLORS = ['#537FE7', '#5BC0BE', '#FFB562', '#F472B6', '#A78BFA', '#EC4899', '#6366F1'];
-
 // 엔드포인트 테이블용 데이터 타입
 interface EndpointTableData {
   endpoint_name: string;
@@ -167,12 +164,9 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
     }));
   }, [data]);
 
-  /** Bar 차트용 상위 7개 엔드포인트 색상 주입 */
+  /** Bar 차트용 상위 7개 엔드포인트 */
   const topEndpoints = useMemo(() => {
-    return allEndpoints.slice(0, 7).map((ep, idx) => ({
-      ...ep,
-      color: CHART_COLORS[idx], // 각 엔드포인트마다 고유한 색상
-    }));
+    return allEndpoints.slice(0, 7);
   }, [allEndpoints]);
 
   const isEmpty = allEndpoints.length === 0;
@@ -271,10 +265,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
                 items={topEndpoints}
                 selectedMetric={selectedMetric}
                 height={350}
-                colors={CHART_COLORS}
-                allItems={allEndpoints}
                 onBarClick={(name: string) => handleEndpointClick(name)}
-                hideXAxisLabel={true}
               />
             </div>
           </div>

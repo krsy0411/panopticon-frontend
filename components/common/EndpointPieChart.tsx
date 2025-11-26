@@ -68,8 +68,11 @@ export default function EndpointPieChart({
           const errorRateText = errorRate !== null ? `${errorRate.toFixed(2)}%` : '-';
           const requestsText = requests.toLocaleString();
 
+          // 슬라이스 색상 가져오기
+          const itemColor = params.data?.itemStyle?.color || params.color || '#537FE7';
+
           return `
-            <div style="font-weight:700;margin-bottom:6px;font-size:24px;line-height:1.2;">${name}</div>
+            <div style="font-weight:700;margin-bottom:6px;font-size:24px;line-height:1.2;color:${itemColor};">${name}</div>
             <div style="line-height:1.2;font-size:20px;">요청수: ${requestsText}</div>
             <div style="line-height:1.2;font-size:20px;">에러율: ${errorRateText}</div>
             <div style="line-height:1.2;font-size:20px;">지연시간: ${p95.toFixed(2)} ms</div>
