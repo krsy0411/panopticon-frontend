@@ -385,7 +385,10 @@ export default function SloCreateModal({
                   <Dropdown
                     value={customUnit}
                     onChange={(value: 'hour' | 'day' | 'week') => setCustomUnit(value)}
-                    options={timeUnitOptions.map((unit) => ({ label: unit.label, value: unit.value }))}
+                    options={timeUnitOptions.map((unit) => ({
+                      label: unit.label,
+                      value: unit.value,
+                    }))}
                     className="w-full"
                   />
                 </div>
@@ -393,7 +396,9 @@ export default function SloCreateModal({
             )}
 
             <p className="text-xs text-gray-500 mt-2">
-              {useCustomRange ? '원하는 기간을 입력하세요.' : '이 SLO를 평가할 시간 범위를 선택하세요.'}
+              {useCustomRange
+                ? '원하는 기간을 입력하세요.'
+                : '이 SLO를 평가할 시간 범위를 선택하세요.'}
             </p>
           </div>
 

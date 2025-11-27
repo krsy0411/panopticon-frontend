@@ -9,7 +9,8 @@ import { useTimeRangeStore } from '@/src/store/timeRangeStore';
 import StateHandler from '@/components/ui/StateHandler';
 import LogGroups, { computeGroups } from '@/components/common/LogGroups';
 import LogGroupPanel from '@/components/common/LogGroupPanel';
-import TagSearchBar, { Tag } from '@/components/ui/TagSearchBar';
+import TagSearchBar from '@/components/ui/TagSearchBar';
+import type { Tag } from '@/types/tagSearchBar';
 
 interface LogsSectionProps {
   serviceName: string;
@@ -184,6 +185,7 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
             }}
             messageKeywords={messageKeywords}
             serviceNames={serviceNames}
+            placeholder="msg:메시지 내용 service:서비스 이름 level:로그 레벨 또는 일반 검색어 입력"
           />
         </div>
       </div>

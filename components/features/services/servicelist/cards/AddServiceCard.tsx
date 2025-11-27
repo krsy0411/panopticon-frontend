@@ -24,10 +24,10 @@ export default function AddServiceCard({ onClick }: AddServiceCardProps) {
     flex flex-col items-center justify-center
     text-gray-500
     transition
-    hover:-translate-y-1 hover:shadow-md
+    hover:border-gray-600 hover:shadow-sm
     ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
     h-full
-    min-h-[160px]   /* 서비스 카드와 동일한 높이 확보 */
+    min-h-40   /* 서비스 카드와 동일한 높이 확보 */
   `}
     >
       <div className="flex flex-col items-center gap-2 text-sm font-medium">

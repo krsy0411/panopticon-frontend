@@ -36,7 +36,7 @@ export default function ServiceCard({ service, onClick }: ServiceCardProps) {
       tabIndex={isInteractive ? 0 : undefined}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md ${
+      className={`rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-gray-600 hover:shadow-sm ${
         isInteractive
           ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
           : ''

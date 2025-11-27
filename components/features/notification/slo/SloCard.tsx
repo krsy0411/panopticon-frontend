@@ -101,7 +101,7 @@ export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: Slo
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
     };
 
@@ -273,7 +273,9 @@ export function SloCard({ slo, onEdit, onDelete, enabled = true, onToggle }: Slo
               <>
                 <div className="flex justify-between items-center text-sm font-semibold text-gray-800">
                   <span>SLO 대비 SLI</span>
-                  <span className={statusColorMap[slo.status]}>{(slo.sliValue * 100).toFixed(1)}%</span>
+                  <span className={statusColorMap[slo.status]}>
+                    {(slo.sliValue * 100).toFixed(1)}%
+                  </span>
                 </div>
                 <div className="h-3 w-full rounded-full bg-gray-200 overflow-hidden">
                   <div

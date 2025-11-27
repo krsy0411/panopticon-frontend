@@ -375,7 +375,10 @@ export default function MetricIntervalPanel({
                     <div className="mt-4">
                       <Pagination
                         page={logPage}
-                        totalPages={Math.max(1, Math.ceil(computeGroups(logEntries).length / logsPerPage))}
+                        totalPages={Math.max(
+                          1,
+                          Math.ceil(computeGroups(logEntries).length / logsPerPage),
+                        )}
                         onPrev={() => setLogPage(logPage - 1)}
                         onNext={() => setLogPage(logPage + 1)}
                       />

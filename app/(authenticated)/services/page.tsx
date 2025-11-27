@@ -5,18 +5,26 @@ import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import ServiceListSidebar from '@/components/features/services/servicelist/Sidebar';
 import CategoryContent from '@/components/features/services/servicelist/CategoryContent';
-import ServiceListFilters from '@/components/features/services/servicelist/Filters';
 import { SelectDate } from '@/components/features/services/SelectDate';
 import Breadcrumb from '@/components/ui/Breadcrumb';
+import TagSearchBar from '@/components/ui/TagSearchBar';
 import { getServices } from '@/src/api/apm';
 import type { ServiceSummary } from '@/types/apm';
 import type { ServiceListCategory } from '@/types/servicelist';
+import type { Tag, TagKey } from '@/types/tagSearchBar';
+
+// TagSearchBar용 태그 키 정의
+const TAG_KEYS: TagKey[] = [
+  { key: 'name', label: '서비스명' },
+  { key: 'env', label: '환경' },
+];
 
 export default function ServicesPage() {
   const router = useRouter();
 
   const [category, setCategory] = useState<ServiceListCategory>('card');
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -42,15 +50,32 @@ export default function ServicesPage() {
 
   // 검색 필터 적용
   const filteredServices = useMemo(() => {
-    const services = data?.services ?? [];
-    const keyword = searchKeyword.trim().toLowerCase();
-    if (!keyword) return services;
-    return services.filter(
-      (service) =>
-        service.service_name.toLowerCase().includes(keyword) ||
-        service.environment.toLowerCase().includes(keyword),
-    );
-  }, [data?.services, searchKeyword]);
+    let services = data?.services ?? [];
+
+    // 태그 필터링
+    tags.forEach(({ key, value }) => {
+      if (key === 'name') {
+        services = services.filter((s) =>
+          s.service_name.toLowerCase().includes(value.toLowerCase()),
+        );
+      }
+      if (key === 'env') {
+        services = services.filter((s) =>
+          s.environment.toLowerCase().includes(value.toLowerCase()),
+        );
+      }
+    });
+
+    // 키워드 필터링
+    if (keyword.trim()) {
+      const k = keyword.toLowerCase();
+      services = services.filter(
+        (s) => s.service_name.toLowerCase().includes(k) || s.environment.toLowerCase().includes(k),
+      );
+    }
+
+    return services;
+  }, [data?.services, tags, keyword]);
 
   // 페이지네이션
   const totalItems = filteredServices.length;
@@ -70,6 +95,17 @@ export default function ServicesPage() {
     setCategory(nextCategory);
     setPage(1);
   };
+
+  // TagSearchBar용 suggestions
+  const serviceNameSuggestions = useMemo(() => {
+    const allServices = data?.services ?? [];
+    return [...new Set(allServices.map((s) => s.service_name))];
+  }, [data?.services]);
+
+  const environmentSuggestions = useMemo(() => {
+    const allServices = data?.services ?? [];
+    return [...new Set(allServices.map((s) => s.environment))];
+  }, [data?.services]);
 
   // 서비스 클릭 시 상세 페이지 이동
   const handleServiceRowClick = (service: ServiceSummary) => {
@@ -101,13 +137,24 @@ export default function ServicesPage() {
           </div>
 
           {/* 필터 (검색) */}
-          <ServiceListFilters
-            searchValue={searchKeyword}
-            onSearchChange={(value) => {
-              setSearchKeyword(value);
-              setPage(1);
-            }}
-          />
+          <div className="w-full">
+            <TagSearchBar
+              tags={tags}
+              onTagsChange={(newTags) => {
+                setTags(newTags);
+                setPage(1);
+              }}
+              keyword={keyword}
+              onKeywordChange={(newKeyword) => {
+                setKeyword(newKeyword);
+                setPage(1);
+              }}
+              messageKeywords={serviceNameSuggestions}
+              serviceNames={environmentSuggestions}
+              tagKeys={TAG_KEYS}
+              placeholder="name:order  env:production  또는 서비스명/환경 검색"
+            />
+          </div>
 
           {/* 카테고리별 콘텐츠 */}
           <CategoryContent

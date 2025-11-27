@@ -263,7 +263,8 @@ function getNodeJsGuides(baseEnv: string, formValues: AgentSetupFormValues): Gui
     },
     {
       title: 'Step 2: SDK 초기화 (main.ts)',
-      description: '애플리케이션의 main.ts 파일에서 MonitoringSDK를 초기화합니다. 수집하고 싶은 항목에 대해서만 true로 설정하세요.',
+      description:
+        '애플리케이션의 main.ts 파일에서 MonitoringSDK를 초기화합니다. 수집하고 싶은 항목에 대해서만 true로 설정하세요.',
       code: `// main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
@@ -398,7 +399,8 @@ function getPythonGuides(_baseEnv: string, formValues: AgentSetupFormValues): Gu
     },
     {
       title: 'Step 2: SDK 초기화 (main.py)',
-      description: 'FastAPI 애플리케이션에서 MonitoringSDK를 초기화합니다. 수집하고 싶은 항목에 대해서만 True로 설정하세요.',
+      description:
+        'FastAPI 애플리케이션에서 MonitoringSDK를 초기화합니다. 수집하고 싶은 항목에 대해서만 True로 설정하세요.',
       code: `# main.py
 from fastapi import FastAPI
 from panopticon_monitoring import MonitoringSDK

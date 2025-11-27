@@ -4,6 +4,7 @@ import { SpanItem, LogItem } from '@/types/apm';
 import { useMemo, useState } from 'react';
 import { IoClose } from 'react-icons/io5';
 import PullUpPanelLayout from '@/components/ui/PullUpPanelLayout';
+import Pagination from '@/components/features/services/Pagination';
 
 interface TraceAnalysisPullUpPanelProps {
   spanId: string;
@@ -57,6 +58,22 @@ const getLogLevelColor = (level: string) => {
   }
 };
 
+// Log level에 따른 border 색상
+const getLogBorderColor = (level: string) => {
+  switch (level) {
+    case 'ERROR':
+      return 'border-red-300';
+    case 'WARN':
+      return 'border-yellow-300';
+    case 'INFO':
+      return 'border-blue-300';
+    case 'DEBUG':
+      return 'border-gray-300';
+    default:
+      return 'border-gray-300';
+  }
+};
+
 const JsonRenderer = ({ data }: { data: Record<string, unknown> }) => {
   const renderValue = (value: unknown, depth: number = 0): React.ReactNode => {
     const indent = '  '.repeat(depth);
@@ -75,7 +92,7 @@ const JsonRenderer = ({ data }: { data: Record<string, unknown> }) => {
     }
 
     if (typeof value === 'string') {
-      return <span className="text-green-600">&quot;{value}&quot;</span>;
+      return <span className="text-black-600">&quot;{value}&quot;</span>;
     }
 
     if (Array.isArray(value)) {
@@ -138,6 +155,8 @@ export default function TraceAnalysisPullUpPanel({
   onClose,
 }: TraceAnalysisPullUpPanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>('span');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // 선택된 스팬 찾기
   const selectedSpan = useMemo(() => {
@@ -145,7 +164,7 @@ export default function TraceAnalysisPullUpPanel({
   }, [spans, spanId]);
 
   // 선택된 트레이스와 관련된 로그 필터링 및 정렬
-  const relatedLogs = useMemo(() => {
+  const allRelatedLogs = useMemo(() => {
     const logLevelOrder: Record<string, number> = {
       ERROR: 0,
       WARN: 1,
@@ -161,6 +180,14 @@ export default function TraceAnalysisPullUpPanel({
         return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
       });
   }, [logs, traceId]);
+
+  // Pagination 처리
+  const totalPages = Math.ceil(allRelatedLogs.length / ITEMS_PER_PAGE);
+  const relatedLogs = useMemo(() => {
+    const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIdx = startIdx + ITEMS_PER_PAGE;
+    return allRelatedLogs.slice(startIdx, endIdx);
+  }, [allRelatedLogs, currentPage]);
 
   if (!selectedSpan) {
     return null;
@@ -360,26 +387,39 @@ export default function TraceAnalysisPullUpPanel({
 
         {activeTab === 'logs' && (
           <div>
-            {relatedLogs.length > 0 ? (
-              <div className="space-y-3">
-                {relatedLogs.map((log, index) => (
-                  <div key={index} className="rounded-lg overflow-hidden bg-gray-100">
-                    {/* Log Level Header */}
-                    <div className={`px-4 py-3 ${getLogLevelColor(log.level)}`}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold">{log.level}</span>
-                        <span className="text-xs text-gray-600">
-                          {new Date(log.timestamp).toLocaleString('ko-KR')}
-                        </span>
+            {allRelatedLogs.length > 0 ? (
+              <>
+                <div className="space-y-3">
+                  {relatedLogs.map((log, index) => (
+                    <div
+                      key={index}
+                      className={`rounded-lg overflow-hidden border-2 ${getLogBorderColor(
+                        log.level,
+                      )}`}
+                    >
+                      {/* Log Level Header */}
+                      <div className={`px-4 py-3 ${getLogLevelColor(log.level)}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold">{log.level}</span>
+                          <span className="text-xs text-gray-600">
+                            {new Date(log.timestamp).toLocaleString('ko-KR')}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Log Content */}
+                      <div className="p-4 bg-white">
+                        <JsonRenderer data={log as unknown as Record<string, unknown>} />
                       </div>
                     </div>
-                    {/* Log Content */}
-                    <div className="p-4 bg-slate-50">
-                      <JsonRenderer data={log as unknown as Record<string, unknown>} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                <Pagination
+                  page={currentPage}
+                  totalPages={totalPages}
+                  onPrev={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  onNext={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                />
+              </>
             ) : (
               <div className="text-center py-8 text-sm text-gray-500">
                 이 스팬과 관련된 로그가 없습니다

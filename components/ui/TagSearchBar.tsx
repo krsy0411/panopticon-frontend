@@ -2,11 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { FiSearch, FiX } from 'react-icons/fi';
-
-export interface Tag {
-  key: string;
-  value: string;
-}
+import type { Tag, TagKey } from '@/types/tagSearchBar';
 
 interface TagSearchBarProps {
   tags: Tag[];
@@ -15,13 +11,17 @@ interface TagSearchBarProps {
   onKeywordChange: (keyword: string) => void;
   messageKeywords: string[];
   serviceNames: string[];
+  tagKeys?: TagKey[];
+  placeholder?: string;
 }
 
-const TAG_KEYS = [
+const DEFAULT_TAG_KEYS: TagKey[] = [
   { key: 'msg', label: '메시지' },
   { key: 'service', label: '서비스명' },
   { key: 'level', label: '로그 레벨' },
 ];
+
+const DEFAULT_PLACEHOLDER = 'msg:error  service:order  trace:abcd  또는 일반 검색어 입력';
 
 export default function TagSearchBar({
   tags,
@@ -30,6 +30,8 @@ export default function TagSearchBar({
   onKeywordChange,
   messageKeywords,
   serviceNames,
+  tagKeys = DEFAULT_TAG_KEYS,
+  placeholder = DEFAULT_PLACEHOLDER,
 }: TagSearchBarProps) {
   const [inputValue, setInputValue] = useState(keyword);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -60,7 +62,7 @@ export default function TagSearchBar({
   const currentValue = isKeyTyping ? '' : inputValue.split(':')[1]?.toLowerCase() || '';
 
   // KEY 후보 필터링
-  const filteredKeySuggestions = TAG_KEYS.filter((tag) =>
+  const filteredKeySuggestions = tagKeys.filter((tag) =>
     tag.key.startsWith(inputValue.toLowerCase()),
   );
 
@@ -125,18 +127,18 @@ export default function TagSearchBar({
       <div
         className="
         flex items-center flex-wrap gap-2 w-full
-        min-h-[52px] px-4 py-2 rounded-xl border bg-white shadow-sm
-        focus-within:ring-2 focus-within:ring-blue-300
+        min-h-[52px] px-4 py-2 rounded-lg bg-white shadow-sm
+        focus-within:ring-2 focus-within:ring-blue-200 transition-all
       "
       >
         {tags.map((t, idx) => (
           <div
             key={idx}
-            className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-lg text-sm"
+            className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2.5 py-1 rounded-md text-sm font-medium"
           >
             {t.key}:{t.value}
             <FiX
-              className="cursor-pointer"
+              className="cursor-pointer hover:text-blue-800 transition-colors"
               onClick={() => onTagsChange(tags.filter((_, i) => i !== idx))}
             />
           </div>
@@ -153,8 +155,8 @@ export default function TagSearchBar({
             }}
             onFocus={() => setShowDropdown(true)}
             onKeyDown={handleKeyDown}
-            placeholder="msg:error  service:order  trace:abcd  또는 일반 검색어 입력"
-            className="flex-1 outline-none bg-transparent text-[15px]"
+            placeholder={placeholder}
+            className="flex-1 outline-none bg-transparent text-sm placeholder:text-gray-400"
           />
         </div>
       </div>
@@ -164,18 +166,19 @@ export default function TagSearchBar({
         <div
           ref={dropdownRef}
           className="
-            absolute z-50 w-full mt-1
-            bg-white shadow-lg border rounded-lg p-2
+            absolute z-50 w-full mt-2
+            bg-white shadow-md rounded-lg p-1
           "
         >
           {isKeyTyping ? (
             filteredKeySuggestions.map((tag) => (
               <div
                 key={tag.key}
-                className="px-3 py-2 hover:bg-gray-100 rounded-md cursor-pointer"
+                className="px-3 py-2 hover:bg-blue-50 rounded-md cursor-pointer transition-colors text-sm text-gray-700"
                 onClick={() => setInputValue(tag.key + ':')}
               >
-                {tag.key} — {tag.label}
+                <span className="font-medium text-blue-600">{tag.key}</span> —{' '}
+                <span className="text-gray-600">{tag.label}</span>
               </div>
             ))
           ) : (
@@ -183,7 +186,7 @@ export default function TagSearchBar({
               {valueSuggestions.map((v) => (
                 <div
                   key={v}
-                  className="px-3 py-2 hover:bg-gray-100 rounded-md cursor-pointer"
+                  className="px-3 py-2 hover:bg-blue-50 rounded-md cursor-pointer transition-colors text-sm text-gray-700"
                   onClick={() => addTag(currentKey!, v)}
                 >
                   {v}
@@ -191,7 +194,7 @@ export default function TagSearchBar({
               ))}
 
               {valueSuggestions.length === 0 && (
-                <div className="px-3 py-2 text-gray-500">검색 결과 없음</div>
+                <div className="px-3 py-2 text-gray-400 text-sm">검색 결과 없음</div>
               )}
             </>
           )}
