@@ -201,8 +201,6 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
     [maxValues],
   );
 
-  // 모든 메트릭에 대해 파이차트를 사용하도록 변경: EndpointPieChart가 툴팁/포맷을 담당합니다.
-
   // 페이지네이션 계산
   const totalPages = Math.max(1, Math.ceil(allEndpoints.length / ITEMS_PER_PAGE));
 

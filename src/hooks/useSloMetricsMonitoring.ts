@@ -12,6 +12,7 @@ import {
   createDiscordPayload,
   createTeamsPayload,
 } from '@/src/utils/webhookPayload';
+import { QUERY_STALETIME_SLO } from '@/src/store/timeRangeStore';
 
 interface SloData {
   id: string;
@@ -47,16 +48,16 @@ export function useSloMetricsMonitoring(serviceName: string) {
   const { data: slos = [] } = useQuery({
     queryKey: ['slos'],
     queryFn: getSlos,
-    staleTime: 5 * 60 * 1000, // 5분
-    gcTime: 5 * 60 * 1000,
+    staleTime: QUERY_STALETIME_SLO,
+    gcTime: QUERY_STALETIME_SLO,
   });
 
   // 웹훅 정보 가져오기
   const { data: webhooks = [] } = useQuery({
     queryKey: ['webhooks'],
     queryFn: getWebhooks,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: QUERY_STALETIME_SLO,
+    gcTime: QUERY_STALETIME_SLO,
   });
 
   // 서비스 메트릭 폴링 (1분 주기)

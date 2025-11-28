@@ -73,6 +73,16 @@ export default function MetricIntervalPanel({
     return getIntervalForTimeRange('1M');
   })();
 
+  // selectedMetric 상태 (먼저 선언하여 쿼리에서 사용 가능)
+  const [selectedMetric, setSelectedMetric] = useState<'requests' | 'error_rate' | 'latency'>(
+    selectedChartType,
+  );
+
+  // props의 selectedChartType이 변경되면 selectedMetric도 동기화
+  useEffect(() => {
+    setSelectedMetric(selectedChartType);
+  }, [selectedChartType]);
+
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
   const [isLogGroupPanelOpen, setIsLogGroupPanelOpen] = useState(false);
   const [selectedLogGroup, setSelectedLogGroup] = useState<{
@@ -141,10 +151,24 @@ export default function MetricIntervalPanel({
 
   // endpoints for the interval (top 5)
   const endpointsQuery = useQuery({
-    queryKey: ['serviceEndpointsInterval', serviceName, fromISO, toISO],
-    queryFn: () =>
-      // limit to top 5 for pie chart
-      getServiceEndpoints(serviceName, { from: fromISO, to: toISO, limit: 5 }),
+    queryKey: ['serviceEndpointsInterval', serviceName, fromISO, toISO, selectedMetric],
+    queryFn: () => {
+      // Map selectedMetric to API sort_by parameter
+      const sortByMap: Record<
+        'requests' | 'error_rate' | 'latency',
+        'request_count' | 'error_rate' | 'latency_p95_ms'
+      > = {
+        requests: 'request_count',
+        error_rate: 'error_rate',
+        latency: 'latency_p95_ms',
+      };
+      return getServiceEndpoints(serviceName, {
+        from: fromISO,
+        to: toISO,
+        limit: 5,
+        sort_by: sortByMap[selectedMetric],
+      });
+    },
     enabled: isOpen && !!serviceName && start < end,
   });
 
@@ -194,15 +218,6 @@ export default function MetricIntervalPanel({
   const [selectedEndpoint, setSelectedEndpoint] = useState<string | null>(null);
   const [isEndpointPanelOpen, setIsEndpointPanelOpen] = useState(false);
 
-  const [selectedMetric, setSelectedMetric] = useState<'requests' | 'error_rate' | 'latency'>(
-    selectedChartType,
-  );
-
-  // selectedChartType이 변경되면 selectedMetric 업데이트
-  useEffect(() => {
-    setSelectedMetric(selectedChartType);
-  }, [selectedChartType]);
-
   // 로그 그룹 페이징
   const [logPage, setLogPage] = useState(1);
   const logsPerPage = 12;
@@ -212,8 +227,6 @@ export default function MetricIntervalPanel({
     { label: '에러율', value: 'error_rate' as const },
     { label: '지연시간', value: 'latency' as const },
   ];
-
-  // NOTE: Pie rendering uses shared EndpointPieChart component below.
 
   // Clear selections when the panel is closed via onClose handler
   const handleClose = useCallback(() => {

@@ -79,7 +79,11 @@ export function computeGroups(items: LogEntry[]): ExtendedGroup[] {
   const map = new Map<string, LogEntry[]>();
 
   for (const it of items) {
-    const key = normalizeMessage(it.message || '') || 'other';
+    // 로그 레벨과 메시지를 함께 사용하여 그룹화 키 생성
+    // 로그 레벨이 같아야 같은 그룹에 포함됨
+    const normalizedMessage = normalizeMessage(it.message || '') || 'other';
+    const level = (it.level || 'INFO').toUpperCase();
+    const key = `${level}|${normalizedMessage}`;
     const arr = map.get(key) || [];
     arr.push(it);
     map.set(key, arr);

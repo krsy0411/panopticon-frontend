@@ -5,7 +5,7 @@ import Pagination from '../../Pagination';
 import { useQuery } from '@tanstack/react-query';
 import { getLogs } from '@/src/api/apm';
 import { LogLevel, LogEntry } from '@/types/apm';
-import { useTimeRangeStore } from '@/src/store/timeRangeStore';
+import { useTimeRangeStore, QUERY_STALETIME_LOGS } from '@/src/store/timeRangeStore';
 import StateHandler from '@/components/ui/StateHandler';
 import LogGroups, { computeGroups } from '@/components/common/LogGroups';
 import LogGroupPanel from '@/components/common/LogGroupPanel';
@@ -89,7 +89,7 @@ export default function LogsSection({ serviceName }: LogsSectionProps) {
         level: levelTag as LogLevel | undefined,
       });
     },
-    refetchInterval: 30000, // 30초마다 갱신
+    staleTime: QUERY_STALETIME_LOGS,
     retry: false, // API 오류 시 재시도 하지 않음
     throwOnError: false, // 오류를 throw하지 않고 isError 상태로만 처리
   });

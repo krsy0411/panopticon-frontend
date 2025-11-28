@@ -20,6 +20,7 @@ import TeamsConfigModal, {
 import { SloCard } from '@/components/features/notification/slo/SloCard';
 import { SloActionModal } from '@/components/features/notification/modals/SloActionModal';
 import SloCreateModal from '@/components/features/notification/modals/SloCreateModal';
+import Breadcrumb from '@/components/ui/Breadcrumb';
 import { getWebhooks } from '@/src/api/webhook';
 import { createSlo, getSlos, deleteSlo, updateSlo } from '@/src/api/slo';
 import type {
@@ -409,137 +410,147 @@ export default function NotificationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
-        {/* 상단 제목 */}
-        <header className="space-y-1">
-          <h1 className="text-3xl font-bold text-gray-900">알림 &amp; SLO 설정</h1>
-          <p className="text-sm text-gray-600">
-            알림 채널 연동 현황과 SLO의 허용치를 한눈에 확인하고 조정하세요.
-          </p>
-        </header>
+    <div className="space-y-8">
+      <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
+        <div className="mx-auto max-w-7xl px-6 pt-8">
+          <Breadcrumb />
+        </div>
+        <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
+          {/* 상단 제목 */}
+          <header className="space-y-1">
+            <h1 className="text-3xl font-bold text-gray-900">알림 &amp; SLO 설정</h1>
+            <p className="text-sm text-gray-600">
+              알림 채널 연동 현황과 SLO의 허용치를 한눈에 확인하고 조정하세요.
+            </p>
+          </header>
 
-        {/* 알림 채널 섹션 */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
-          <div className="mb-4">
-            <h3 className="text-lg font-bold text-gray-900">알림 채널 연동 상태</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {mergedIntegrations.map((integration) => (
-              <NotificationIntegrationCard
-                key={integration.type}
-                {...integration}
-                isConnected={integration.connected}
-                onConnect={() => handleConnect(integration.type)}
-                onDisconnect={() => handleDisconnect(integration.type)}
-              />
-            ))}
-          </div>
-        </section>
-
-        {/* SLO 목록 */}
-        <section className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
-          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">SLO 목록</h2>
-              <p className="text-sm text-gray-500 mt-2">
-                서비스의 SLO(Service Level Objective)를 관리하고 모니터링하세요.
-              </p>
+          {/* 알림 채널 섹션 */}
+          <section className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-gray-900">알림 채널 연동 상태</h3>
             </div>
-            {/* 우측 상단: 생성 버튼 */}
-            <button
-              type="button"
-              onClick={() => setCreateModalOpen(true)}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all whitespace-nowrap"
-            >
-              + SLO 생성
-            </button>
-          </div>
-
-          {/* SLO 카드 리스트 */}
-          {displayedSlos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="text-center">
-                <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                  <svg
-                    className="w-7 h-7 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <p className="text-gray-500 text-sm">생성된 SLO가 없습니다.</p>
-                <button
-                  type="button"
-                  onClick={() => setCreateModalOpen(true)}
-                  className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-all"
-                >
-                  첫 SLO 생성하기
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {displayedSlos.map((slo) => (
-                <SloCard key={slo.id} slo={slo} onEdit={handleSloEdit} onDelete={handleSloDelete} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {mergedIntegrations.map((integration) => (
+                <NotificationIntegrationCard
+                  key={integration.type}
+                  {...integration}
+                  isConnected={integration.connected}
+                  onConnect={() => handleConnect(integration.type)}
+                  onDisconnect={() => handleDisconnect(integration.type)}
+                />
               ))}
             </div>
-          )}
-        </section>
+          </section>
+
+          {/* SLO 목록 */}
+          <section className="rounded-2xl bg-white p-6 shadow-sm border border-gray-200">
+            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">SLO 목록</h2>
+                <p className="text-sm text-gray-500 mt-2">
+                  서비스의 SLO(Service Level Objective)를 관리하고 모니터링하세요.
+                </p>
+              </div>
+              {/* 우측 상단: 생성 버튼 */}
+              <button
+                type="button"
+                onClick={() => setCreateModalOpen(true)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all whitespace-nowrap"
+              >
+                + SLO 생성
+              </button>
+            </div>
+
+            {/* SLO 카드 리스트 */}
+            {displayedSlos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                    <svg
+                      className="w-7 h-7 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-gray-500 text-sm">생성된 SLO가 없습니다.</p>
+                  <button
+                    type="button"
+                    onClick={() => setCreateModalOpen(true)}
+                    className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-all"
+                  >
+                    첫 SLO 생성하기
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {displayedSlos.map((slo) => (
+                  <SloCard
+                    key={slo.id}
+                    slo={slo}
+                    onEdit={handleSloEdit}
+                    onDelete={handleSloDelete}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* SLO 삭제/수정 모달 */}
+        <SloActionModal
+          type={actionState.type}
+          open={!!actionState.target}
+          slo={actionState.target}
+          onConfirm={handleActionConfirm}
+          onClose={() => setActionState((prev) => ({ ...prev, target: null }))}
+        />
+
+        {/* 알림 채널 설정 모달 */}
+        <SlackConfigModal
+          isOpen={activeModal === 'slack'}
+          onClose={() => setActiveModal(null)}
+          onSave={handleSlackSave}
+        />
+        <EmailConfigModal
+          isOpen={activeModal === 'email'}
+          onClose={() => setActiveModal(null)}
+          onSave={handleEmailSave}
+        />
+        <DiscordConfigModal
+          isOpen={activeModal === 'discord'}
+          onClose={() => setActiveModal(null)}
+          onSave={handleDiscordSave}
+        />
+        <TeamsConfigModal
+          isOpen={activeModal === 'teams'}
+          onClose={() => setActiveModal(null)}
+          onSave={handleTeamsSave}
+        />
+
+        {/* SLO 생성/수정 모달 */}
+        <SloCreateModal
+          open={createModalOpen}
+          onClose={() => {
+            setCreateModalOpen(false);
+            setEditingData(null);
+          }}
+          defaultMinutes={60 * 24} // 기본값: 24시간
+          onSubmit={handleCreateSlo}
+          editingData={editingData}
+        />
+
+        {/* toast 메시지 */}
+        <ToastContainer position="top-right" autoClose={1200} />
       </div>
-
-      {/* SLO 삭제/수정 모달 */}
-      <SloActionModal
-        type={actionState.type}
-        open={!!actionState.target}
-        slo={actionState.target}
-        onConfirm={handleActionConfirm}
-        onClose={() => setActionState((prev) => ({ ...prev, target: null }))}
-      />
-
-      {/* 알림 채널 설정 모달 */}
-      <SlackConfigModal
-        isOpen={activeModal === 'slack'}
-        onClose={() => setActiveModal(null)}
-        onSave={handleSlackSave}
-      />
-      <EmailConfigModal
-        isOpen={activeModal === 'email'}
-        onClose={() => setActiveModal(null)}
-        onSave={handleEmailSave}
-      />
-      <DiscordConfigModal
-        isOpen={activeModal === 'discord'}
-        onClose={() => setActiveModal(null)}
-        onSave={handleDiscordSave}
-      />
-      <TeamsConfigModal
-        isOpen={activeModal === 'teams'}
-        onClose={() => setActiveModal(null)}
-        onSave={handleTeamsSave}
-      />
-
-      {/* SLO 생성/수정 모달 */}
-      <SloCreateModal
-        open={createModalOpen}
-        onClose={() => {
-          setCreateModalOpen(false);
-          setEditingData(null);
-        }}
-        defaultMinutes={60 * 24} // 기본값: 24시간
-        onSubmit={handleCreateSlo}
-        editingData={editingData}
-      />
-
-      {/* toast 메시지 */}
-      <ToastContainer position="top-right" autoClose={1200} />
     </div>
   );
 }

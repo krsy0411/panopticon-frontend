@@ -39,6 +39,7 @@ export default function EndpointPieChart({
   const pieOption = useMemo(() => {
     const palette = colors && colors.length > 0 ? colors : PIE_CHART_COLORS;
 
+    // 서버에서 이미 정렬된 데이터를 받으므로 그대로 사용
     const pieData = (items || []).map((ep, idx) => {
       let value: number = ep.request_count ?? 0;
       if (selectedMetric === 'error_rate') value = (ep.error_rate ?? 0) * 100;

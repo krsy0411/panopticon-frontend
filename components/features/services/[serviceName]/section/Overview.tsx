@@ -1,21 +1,24 @@
 'use client';
-// Chart rendering and selection moved to `OverviewCharts` component
+
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import OverviewCharts from '@/components/features/services/[serviceName]/OverviewCharts';
 import { getServiceMetrics } from '@/src/api/apm';
 import { POLLING_MAIN_INTERVAL, useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { convertTimeRangeToParams, getChartXAxisRange } from '@/src/utils/timeRange';
-import {
-  getTimeAxisFormatter,
-  getBarMaxWidthForTimeAxis,
-  getXAxisInterval,
-} from '@/src/utils/chartFormatter';
+import { getTimeAxisFormatter, getBarMaxWidthForTimeAxis } from '@/src/utils/chartFormatter';
 import { useSloMetricsMonitoring } from '@/src/hooks/useSloMetricsMonitoring';
 
 interface OverviewSectionProps {
   serviceName: string;
 }
+
+// 레이턴시 차트 색상 정의 (컴포넌트 바깥에서 정의하여 불필요한 재렌더링 방지)
+const LATENCY_COLORS = {
+  p95: '#dc2626', // 빨강 (더 진한 빨강)
+  p90: '#f59e0b', // 주황 (더 진한 주황)
+  p50: '#10b981', // 초록 (에메랄드 그린)
+};
 
 export default function OverviewSection({ serviceName }: OverviewSectionProps) {
   // SLO 메트릭 모니터링 초기화
@@ -86,47 +89,49 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
   }, [metricsArray, timeRange]);
 
   /* -------------------- 차트 공통 스타일 ------------------ */
-  const baseStyle = {
-    backgroundColor: 'transparent',
-    animation: false, // markLine 애니메이션 비활성화
-    grid: { left: 55, right: 15, top: 60, bottom: 50 },
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(0,0,0,0.7)',
-      borderColor: 'transparent',
-      textStyle: { color: '#f9fafb', fontSize: 32 },
-      padding: 12,
-      borderRadius: 8,
-    },
-    xAxis: {
-      type: 'time',
-      min: xAxisMin,
-      max: xAxisMax,
-      axisLabel: {
-        color: '#6b7280',
-        fontSize: 11,
-        formatter: getTimeAxisFormatter(interval),
-        hideOverlap: true,
-        interval: getXAxisInterval(interval), // interval에 따른 일정한 라벨 간격
+  const baseStyle = useMemo(
+    () => ({
+      backgroundColor: 'transparent',
+      animation: false, // markLine 애니메이션 비활성화
+      grid: { left: 55, right: 15, top: 60, bottom: 50 },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        borderColor: 'transparent',
+        textStyle: { color: '#f9fafb', fontSize: 32 },
+        padding: 12,
+        borderRadius: 8,
       },
-      axisLine: { show: true, lineStyle: { color: '#9ca3af', width: 1 } },
-      axisTick: { show: false },
-    },
-    yAxis: {
-      type: 'value',
-      axisLine: { show: false },
-      axisLabel: { color: '#6b7280', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#e5e7eb' } },
-    },
-    legend: {
-      bottom: 0,
-      icon: 'roundRect',
-      itemWidth: 10,
-      itemHeight: 10,
-      itemGap: 10,
-      textStyle: { color: '#6b7280', fontSize: 11 },
-    },
-  };
+      xAxis: {
+        type: 'time',
+        min: xAxisMin,
+        max: xAxisMax,
+        axisLabel: {
+          color: '#6b7280',
+          fontSize: 11,
+          formatter: getTimeAxisFormatter(interval),
+          hideOverlap: true,
+        },
+        axisLine: { show: true, lineStyle: { color: '#9ca3af', width: 1 } },
+        axisTick: { show: false },
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { show: false },
+        axisLabel: { color: '#6b7280', fontSize: 11 },
+        splitLine: { lineStyle: { color: '#e5e7eb' } },
+      },
+      legend: {
+        bottom: 0,
+        icon: 'roundRect',
+        itemWidth: 10,
+        itemHeight: 10,
+        itemGap: 10,
+        textStyle: { color: '#6b7280', fontSize: 11 },
+      },
+    }),
+    [interval, xAxisMin, xAxisMax],
+  );
 
   /* -------------------- 요청수 -------------------- */
   // 요청수 평균 계산
@@ -138,87 +143,90 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
       : 0;
   }, [chartData.requests]);
 
-  const requestsOption = {
-    ...baseStyle,
-    title: {
-      text: '요청수',
-      left: 'center',
-      textStyle: { fontSize: 14, color: '#374151', fontWeight: 600 },
-    },
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(0,0,0,0.7)',
-      borderColor: 'transparent',
-      textStyle: { color: '#f9fafb', fontSize: 32 },
-      padding: 12,
-      borderRadius: 8,
-      formatter: (params: unknown) => {
-        interface TooltipParam {
-          axisValue: string | number;
-          color: string;
-          seriesName: string;
-          value: number[];
-        }
-        const list = Array.isArray(params) ? params : [params as TooltipParam];
-        if (!list?.length) return '';
-
-        const timestamp =
-          typeof list[0].axisValue === 'number'
-            ? list[0].axisValue
-            : new Date(list[0].axisValue).getTime();
-        const date = new Date(timestamp);
-        const formattedDate = date.toLocaleString('ko-KR', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
-
-        const header = `<div style="margin-bottom:6px;font-size:24px;line-height:1.2;"><b>${formattedDate}</b></div>`;
-        const lines = list
-          .map(
-            (p) =>
-              `<div style="line-height:1.2;font-size:20px;"><span style="color:${
-                p.color
-              }">●</span> ${p.seriesName}: ${Math.round(p.value[1] ?? 0)}</div>`,
-          )
-          .join('');
-        return header + lines;
+  const requestsOption = useMemo(
+    () => ({
+      ...baseStyle,
+      title: {
+        text: '요청수',
+        left: 'center',
+        textStyle: { fontSize: 14, color: '#374151', fontWeight: 600 },
       },
-    },
-    series: [
-      {
-        name: '요청수',
-        type: 'bar',
-        data: chartData.requests,
-        barMaxWidth: getBarMaxWidthForTimeAxis(interval),
-        itemStyle: {
-          color: '#2563eb',
-          opacity: 0.65,
-          borderRadius: [0, 0, 0, 0],
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        borderColor: 'transparent',
+        textStyle: { color: '#f9fafb', fontSize: 32 },
+        padding: 12,
+        borderRadius: 8,
+        formatter: (params: unknown) => {
+          interface TooltipParam {
+            axisValue: string | number;
+            color: string;
+            seriesName: string;
+            value: number[];
+          }
+          const list = Array.isArray(params) ? params : [params as TooltipParam];
+          if (!list?.length) return '';
+
+          const timestamp =
+            typeof list[0].axisValue === 'number'
+              ? list[0].axisValue
+              : new Date(list[0].axisValue).getTime();
+          const date = new Date(timestamp);
+          const formattedDate = date.toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
+
+          const header = `<div style="margin-bottom:6px;font-size:24px;line-height:1.2;"><b>${formattedDate}</b></div>`;
+          const lines = list
+            .map(
+              (p) =>
+                `<div style="line-height:1.2;font-size:20px;"><span style="color:${
+                  p.color
+                }">●</span> ${p.seriesName}: ${Math.round(p.value[1] ?? 0)}</div>`,
+            )
+            .join('');
+          return header + lines;
         },
-        markLine: {
-          symbol: 'none',
-          label: { show: false },
-          animationDuration: 0,
-          silent: true,
-          data: [
-            {
-              name: '평균',
-              yAxis: requestsAverage,
-              lineStyle: {
-                type: 'dashed',
-                color: '#1e40af',
-                width: 2,
+      },
+      series: [
+        {
+          name: '요청수',
+          type: 'bar',
+          data: chartData.requests,
+          barMaxWidth: getBarMaxWidthForTimeAxis(interval),
+          itemStyle: {
+            color: '#2563eb',
+            opacity: 0.65,
+            borderRadius: [0, 0, 0, 0],
+          },
+          markLine: {
+            symbol: 'none',
+            label: { show: false },
+            animationDuration: 0,
+            silent: true,
+            data: [
+              {
+                name: '평균',
+                yAxis: requestsAverage,
+                lineStyle: {
+                  type: 'dashed',
+                  color: '#1e40af',
+                  width: 2,
+                },
               },
-            },
-          ],
+            ],
+          },
         },
-      },
-    ],
-  };
+      ],
+    }),
+    [baseStyle, chartData.requests, requestsAverage, interval],
+  );
 
   /* -------------------- 에러율 -------------------- */
   // 에러율 평균 계산
@@ -230,106 +238,102 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
       : 0;
   }, [chartData.errorRate]);
 
-  const errorRateOption = {
-    ...baseStyle,
-    title: {
-      text: '에러율',
-      left: 'center',
-      textStyle: { fontSize: 14, color: '#374151', fontWeight: 600 },
-    },
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(0,0,0,0.7)',
-      borderColor: 'transparent',
-      textStyle: { color: '#f9fafb', fontSize: 32 },
-      padding: 12,
-      borderRadius: 8,
-      formatter: (params: unknown) => {
-        interface TooltipParam {
-          axisValue: string | number;
-          color: string;
-          seriesName: string;
-          value: number[];
-        }
-        const list = Array.isArray(params) ? params : [params as TooltipParam];
-        if (!list?.length) return '';
-
-        const timestamp =
-          typeof list[0].axisValue === 'number'
-            ? list[0].axisValue
-            : new Date(list[0].axisValue).getTime();
-        const date = new Date(timestamp);
-        const formattedDate = date.toLocaleString('ko-KR', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
-
-        const header = `<div style="margin-bottom:6px;font-size:24px;line-height:1.2;"><b>${formattedDate}</b></div>`;
-        const lines = list
-          .map(
-            (p) =>
-              `<div style="line-height:1.2;font-size:20px;"><span style="color:${
-                p.color
-              }">●</span> ${p.seriesName}: ${(p.value[1] ?? 0).toFixed(2)}%</div>`,
-          )
-          .join('');
-        return header + lines;
+  const errorRateOption = useMemo(
+    () => ({
+      ...baseStyle,
+      title: {
+        text: '에러율',
+        left: 'center',
+        textStyle: { fontSize: 14, color: '#374151', fontWeight: 600 },
       },
-    },
-    yAxis: {
-      type: 'value',
-      axisLine: { show: false },
-      axisLabel: {
-        color: '#6b7280',
-        fontSize: 11,
-        formatter: (value: number) => `${value}%`,
-      },
-      splitLine: { lineStyle: { color: '#e5e7eb' } },
-    },
-    series: [
-      {
-        name: '에러율',
-        type: 'bar',
-        data: chartData.errorRate,
-        barMaxWidth: getBarMaxWidthForTimeAxis(interval),
-        itemStyle: {
-          color: '#ef4444',
-          opacity: 0.7,
-          borderRadius: [0, 0, 0, 0],
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        borderColor: 'transparent',
+        textStyle: { color: '#f9fafb', fontSize: 32 },
+        padding: 12,
+        borderRadius: 8,
+        formatter: (params: unknown) => {
+          interface TooltipParam {
+            axisValue: string | number;
+            color: string;
+            seriesName: string;
+            value: number[];
+          }
+          const list = Array.isArray(params) ? params : [params as TooltipParam];
+          if (!list?.length) return '';
+
+          const timestamp =
+            typeof list[0].axisValue === 'number'
+              ? list[0].axisValue
+              : new Date(list[0].axisValue).getTime();
+          const date = new Date(timestamp);
+          const formattedDate = date.toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
+
+          const header = `<div style="margin-bottom:6px;font-size:24px;line-height:1.2;"><b>${formattedDate}</b></div>`;
+          const lines = list
+            .map(
+              (p) =>
+                `<div style="line-height:1.2;font-size:20px;"><span style="color:${
+                  p.color
+                }">●</span> ${p.seriesName}: ${(p.value[1] ?? 0).toFixed(2)}%</div>`,
+            )
+            .join('');
+          return header + lines;
         },
-        markLine: {
-          symbol: 'none',
-          label: { show: false },
-          animationDuration: 0,
-          silent: true,
-          data: [
-            {
-              name: '평균',
-              yAxis: errorRateAverage,
-              lineStyle: {
-                type: 'dashed',
-                color: '#991b1b',
-                width: 2,
+      },
+      yAxis: {
+        type: 'value',
+        axisLine: { show: false },
+        axisLabel: {
+          color: '#6b7280',
+          fontSize: 11,
+          formatter: (value: number) => `${value}%`,
+        },
+        splitLine: { lineStyle: { color: '#e5e7eb' } },
+      },
+      series: [
+        {
+          name: '에러율',
+          type: 'bar',
+          data: chartData.errorRate,
+          barMaxWidth: getBarMaxWidthForTimeAxis(interval),
+          itemStyle: {
+            color: '#ef4444',
+            opacity: 0.7,
+            borderRadius: [0, 0, 0, 0],
+          },
+          markLine: {
+            symbol: 'none',
+            label: { show: false },
+            animationDuration: 0,
+            silent: true,
+            data: [
+              {
+                name: '평균',
+                yAxis: errorRateAverage,
+                lineStyle: {
+                  type: 'dashed',
+                  color: '#991b1b',
+                  width: 2,
+                },
               },
-            },
-          ],
+            ],
+          },
         },
-      },
-    ],
-  };
+      ],
+    }),
+    [baseStyle, chartData.errorRate, errorRateAverage, interval],
+  );
 
   /* -------------------- 레이턴시 -------------------- */
-  // 레이턴시 차트 색상 정의 (라벨과 선 동기화)
-  const latencyColors = {
-    p95: '#dc2626', // 빨강 (더 진한 빨강)
-    p90: '#f59e0b', // 주황 (더 진한 주황)
-    p50: '#10b981', // 초록 (에메랄드 그린)
-  };
-
   // 레이턴시 평균값 계산 (p95, p90, p50 각각)
   const latencyAverages = useMemo(() => {
     const calculateAverage = (data: number[][]) => {
@@ -347,159 +351,162 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
     };
   }, [chartData.latency]);
 
-  const latencyOption = {
-    ...baseStyle,
-    title: {
-      text: '레이턴시',
-      left: 'center',
-      textStyle: { fontSize: 14, color: '#374151', fontWeight: 600 },
-    },
-    grid: { left: 55, right: 15, top: 60, bottom: 60 },
-    yAxis: {
-      type: 'value',
-      name: 'Milliseconds',
-      nameLocation: 'middle',
-      nameGap: 40,
-      nameTextStyle: { color: '#6b7280', fontSize: 12 },
-      axisLabel: { color: '#6b7280', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#e5e7eb' } },
-    },
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(0,0,0,0.7)',
-      borderColor: 'transparent',
-      textStyle: { color: '#f9fafb', fontSize: 32 },
-      padding: 12,
-      borderRadius: 8,
-      formatter: (params: unknown) => {
-        interface TooltipParam {
-          axisValue: string | number;
-          color: string;
-          seriesName: string;
-          value: number[];
-        }
-        const list = Array.isArray(params) ? params : [params as TooltipParam];
-        if (!list?.length) return '';
+  const latencyOption = useMemo(
+    () => ({
+      ...baseStyle,
+      title: {
+        text: '레이턴시',
+        left: 'center',
+        textStyle: { fontSize: 14, color: '#374151', fontWeight: 600 },
+      },
+      grid: { left: 55, right: 15, top: 60, bottom: 60 },
+      yAxis: {
+        type: 'value',
+        name: 'Milliseconds',
+        nameLocation: 'middle',
+        nameGap: 40,
+        nameTextStyle: { color: '#6b7280', fontSize: 12 },
+        axisLabel: { color: '#6b7280', fontSize: 11 },
+        splitLine: { lineStyle: { color: '#e5e7eb' } },
+      },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        borderColor: 'transparent',
+        textStyle: { color: '#f9fafb', fontSize: 32 },
+        padding: 12,
+        borderRadius: 8,
+        formatter: (params: unknown) => {
+          interface TooltipParam {
+            axisValue: string | number;
+            color: string;
+            seriesName: string;
+            value: number[];
+          }
+          const list = Array.isArray(params) ? params : [params as TooltipParam];
+          if (!list?.length) return '';
 
-        const timestamp =
-          typeof list[0].axisValue === 'number'
-            ? list[0].axisValue
-            : new Date(list[0].axisValue).getTime();
-        const date = new Date(timestamp);
-        const formattedDate = date.toLocaleString('ko-KR', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
+          const timestamp =
+            typeof list[0].axisValue === 'number'
+              ? list[0].axisValue
+              : new Date(list[0].axisValue).getTime();
+          const date = new Date(timestamp);
+          const formattedDate = date.toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
 
-        const header = `<div style="margin-bottom:6px;font-size:24px;line-height:1.2;"><b>${formattedDate}</b></div>`;
-        const lines = list
-          .map(
-            (p) =>
-              `<div style="line-height:1.2;font-size:20px;"><span style="color:${
-                p.color
-              }">●</span> ${p.seriesName}: ${(p.value[1] ?? 0).toFixed(2)}ms</div>`,
-          )
-          .join('');
-        return header + lines;
-      },
-    },
-    series: [
-      {
-        name: 'p95',
-        type: 'line',
-        data: chartData.latency.p95,
-        smooth: true,
-        symbol: 'circle',
-        showSymbol: true,
-        symbolSize: 6,
-        cursor: 'pointer',
-        lineStyle: { width: 2, color: latencyColors.p95 },
-        itemStyle: { color: latencyColors.p95 },
-        emphasis: { focus: 'series' },
-        markLine: {
-          symbol: 'none',
-          label: { show: false },
-          animationDuration: 0,
-          silent: true,
-          data: [
-            {
-              name: 'p95 평균',
-              yAxis: latencyAverages.p95,
-              lineStyle: {
-                type: 'dashed',
-                color: 'rgba(220, 38, 38, 0.5)',
-                width: 2,
-              },
-            },
-          ],
+          const header = `<div style="margin-bottom:6px;font-size:24px;line-height:1.2;"><b>${formattedDate}</b></div>`;
+          const lines = list
+            .map(
+              (p) =>
+                `<div style="line-height:1.2;font-size:20px;"><span style="color:${
+                  p.color
+                }">●</span> ${p.seriesName}: ${(p.value[1] ?? 0).toFixed(2)}ms</div>`,
+            )
+            .join('');
+          return header + lines;
         },
       },
-      {
-        name: 'p90',
-        type: 'line',
-        data: chartData.latency.p90,
-        smooth: true,
-        symbol: 'circle',
-        showSymbol: true,
-        symbolSize: 6,
-        cursor: 'pointer',
-        lineStyle: { width: 2, color: latencyColors.p90 },
-        itemStyle: { color: latencyColors.p90 },
-        emphasis: { focus: 'series' },
-        markLine: {
-          symbol: 'none',
-          label: { show: false },
-          animationDuration: 0,
-          silent: true,
-          data: [
-            {
-              name: 'p90 평균',
-              yAxis: latencyAverages.p90,
-              lineStyle: {
-                type: 'dashed',
-                color: 'rgba(245, 158, 11, 0.5)',
-                width: 2,
+      series: [
+        {
+          name: 'p95',
+          type: 'line',
+          data: chartData.latency.p95,
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: true,
+          symbolSize: 6,
+          cursor: 'pointer',
+          lineStyle: { width: 2, color: LATENCY_COLORS.p95 },
+          itemStyle: { color: LATENCY_COLORS.p95 },
+          emphasis: { focus: 'series' },
+          markLine: {
+            symbol: 'none',
+            label: { show: false },
+            animationDuration: 0,
+            silent: true,
+            data: [
+              {
+                name: 'p95 평균',
+                yAxis: latencyAverages.p95,
+                lineStyle: {
+                  type: 'dashed',
+                  color: 'rgba(220, 38, 38, 0.5)',
+                  width: 2,
+                },
               },
-            },
-          ],
+            ],
+          },
         },
-      },
-      {
-        name: 'p50',
-        type: 'line',
-        data: chartData.latency.p50,
-        smooth: true,
-        symbol: 'circle',
-        showSymbol: true,
-        symbolSize: 6,
-        cursor: 'pointer',
-        lineStyle: { width: 2, color: latencyColors.p50 },
-        itemStyle: { color: latencyColors.p50 },
-        emphasis: { focus: 'series' },
-        markLine: {
-          symbol: 'none',
-          label: { show: false },
-          animationDuration: 0,
-          silent: true,
-          data: [
-            {
-              name: 'p50 평균',
-              yAxis: latencyAverages.p50,
-              lineStyle: {
-                type: 'dashed',
-                color: 'rgba(16, 185, 129, 0.5)',
-                width: 2,
+        {
+          name: 'p90',
+          type: 'line',
+          data: chartData.latency.p90,
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: true,
+          symbolSize: 6,
+          cursor: 'pointer',
+          lineStyle: { width: 2, color: LATENCY_COLORS.p90 },
+          itemStyle: { color: LATENCY_COLORS.p90 },
+          emphasis: { focus: 'series' },
+          markLine: {
+            symbol: 'none',
+            label: { show: false },
+            animationDuration: 0,
+            silent: true,
+            data: [
+              {
+                name: 'p90 평균',
+                yAxis: latencyAverages.p90,
+                lineStyle: {
+                  type: 'dashed',
+                  color: 'rgba(245, 158, 11, 0.5)',
+                  width: 2,
+                },
               },
-            },
-          ],
+            ],
+          },
         },
-      },
-    ],
-  };
+        {
+          name: 'p50',
+          type: 'line',
+          data: chartData.latency.p50,
+          smooth: true,
+          symbol: 'circle',
+          showSymbol: true,
+          symbolSize: 6,
+          cursor: 'pointer',
+          lineStyle: { width: 2, color: LATENCY_COLORS.p50 },
+          itemStyle: { color: LATENCY_COLORS.p50 },
+          emphasis: { focus: 'series' },
+          markLine: {
+            symbol: 'none',
+            label: { show: false },
+            animationDuration: 0,
+            silent: true,
+            data: [
+              {
+                name: 'p50 평균',
+                yAxis: latencyAverages.p50,
+                lineStyle: {
+                  type: 'dashed',
+                  color: 'rgba(16, 185, 129, 0.5)',
+                  width: 2,
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }),
+    [baseStyle, chartData.latency, latencyAverages],
+  );
 
   return (
     <div className="space-y-4">

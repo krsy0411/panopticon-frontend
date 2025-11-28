@@ -107,27 +107,38 @@ export function getBarWidth(interval: string): number | string {
 }
 
 /**
- * interval 값에 따라 ECharts 시간 축 포맷 문자열 반환
+ * interval 값에 따라 ECharts 시간 축 포맷 함수 반환
  * @param interval - API interval 값 (예: "20s", "30s", "45s", "1m", "3m", "7m", "9m", "12m", "25m", "2h", "3h", "4h", "12h")
- * @returns ECharts formatter 문자열 (예: "{HH}:{mm}:{ss}", "{MM}/{dd} {HH}:{mm}")
+ * @returns ECharts formatter 함수
  */
-export function getTimeAxisFormatter(interval: string): string {
-  // 초 단위 간격: 시:분:초
-  if (['20s', '30s', '45s'].includes(interval)) {
-    return '{HH}:{mm}:{ss}';
-  }
-  // 짧은 간격 (1분~25분): 시:분
-  else if (['1m', '3m', '7m', '9m', '12m', '25m'].includes(interval)) {
-    return '{HH}:{mm}';
-  }
-  // 중간 간격 (2시간~12시간): 시간만
-  else if (['2h', '3h', '4h', '12h'].includes(interval)) {
-    return '{HH}h';
-  }
-  // 긴 간격 (1일 이상): 월/일 HH:mm
-  else {
-    return '{MM}/{dd} {HH}:{mm}';
-  }
+export function getTimeAxisFormatter(interval: string): (value: number | string) => string {
+  return (value: number | string) => {
+    const timestamp = typeof value === 'string' ? parseInt(value, 10) : value;
+    const date = new Date(timestamp);
+
+    const hour = String(date.getHours()).padStart(2, '0');
+    const minute = String(date.getMinutes()).padStart(2, '0');
+    const second = String(date.getSeconds()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    // 초 단위 간격: 시:분:초
+    if (['20s', '30s', '45s'].includes(interval)) {
+      return `${hour}:${minute}:${second}`;
+    }
+    // 짧은 간격 (1분~25분): 시:분
+    else if (['1m', '3m', '7m', '9m', '12m', '25m'].includes(interval)) {
+      return `${hour}:${minute}`;
+    }
+    // 중간 간격 (2시간~12시간): 월/일 시간
+    else if (['2h', '3h', '4h', '12h'].includes(interval)) {
+      return `${month}/${day} ${hour}h`;
+    }
+    // 긴 간격 (1일 이상): 월/일 HH:mm
+    else {
+      return `${month}/${day} ${hour}:${minute}`;
+    }
+  };
 }
 
 /**

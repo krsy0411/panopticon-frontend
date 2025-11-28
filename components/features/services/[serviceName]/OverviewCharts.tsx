@@ -98,6 +98,7 @@ export default function OverviewCharts({
     if (key === 'requests')
       return (
         <ReactECharts
+          key={`requests-${requestsOption?.xAxis?.axisLabel?.interval}`}
           option={withLegendSelection(requestsOption, syncedLegendSelection.requests)}
           style={{ height: selectedCount === 1 ? 420 : 320 }}
           notMerge={true}
@@ -126,6 +127,7 @@ export default function OverviewCharts({
     if (key === 'errorRate')
       return (
         <ReactECharts
+          key={`errorRate-${errorRateOption?.xAxis?.axisLabel?.interval}`}
           option={withLegendSelection(errorRateOption, syncedLegendSelection.errorRate)}
           style={{ height: selectedCount === 1 ? 420 : 320 }}
           notMerge={true}
@@ -154,6 +156,7 @@ export default function OverviewCharts({
     if (key === 'latency')
       return (
         <ReactECharts
+          key={`latency-${latencyOption?.xAxis?.axisLabel?.interval}`}
           option={withLegendSelection(latencyOption, syncedLegendSelection.latency)}
           style={{ height: selectedCount === 1 ? 420 : 320 }}
           notMerge={true}
@@ -236,6 +239,7 @@ export default function OverviewCharts({
                 emptyMessage="표시할 메트릭 데이터가 없습니다"
               >
                 <ReactECharts
+                  key={`default-requests-${requestsOption?.xAxis?.axisLabel?.interval}`}
                   option={withLegendSelection(requestsOption, syncedLegendSelection.requests)}
                   style={{ height: 250 }}
                   notMerge={true}
@@ -278,6 +282,7 @@ export default function OverviewCharts({
                 emptyMessage="표시할 에러율 데이터가 없습니다"
               >
                 <ReactECharts
+                  key={`default-errorRate-${errorRateOption?.xAxis?.axisLabel?.interval}`}
                   option={withLegendSelection(errorRateOption, syncedLegendSelection.errorRate)}
                   style={{ height: 250 }}
                   notMerge={true}
@@ -313,6 +318,7 @@ export default function OverviewCharts({
                 emptyMessage="표시할 레이턴시 데이터가 없습니다"
               >
                 <ReactECharts
+                  key={`default-latency-${latencyOption?.xAxis?.axisLabel?.interval}`}
                   option={withLegendSelection(latencyOption, syncedLegendSelection.latency)}
                   style={{ height: 250 }}
                   notMerge={true}
