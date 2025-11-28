@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getServiceTraces } from '@/src/api/apm';
 import { TraceSummary } from '@/types/apm';
-import { useTimeRangeStore, POLLING_INTERVAL } from '@/src/store/timeRangeStore';
+import { useTimeRangeStore, POLLING_MAIN_INTERVAL } from '@/src/store/timeRangeStore';
 import { getTimeAxisFormatter } from '@/src/utils/chartFormatter';
 import { convertTimeRangeToParams, getChartXAxisRange } from '@/src/utils/timeRange';
 import StateHandler from '@/components/ui/StateHandler';
@@ -147,7 +147,7 @@ export default function TracesSection({ serviceName }: TracesSectionProps) {
         size: 200, // 현재 200개가 최대
       });
     },
-    refetchInterval: POLLING_INTERVAL,
+    refetchInterval: POLLING_MAIN_INTERVAL,
     refetchIntervalInBackground: true, // 백그라운드에서도 갱신
     staleTime: 0, // 즉시 stale 상태로 만들어 항상 최신 데이터 요청
   });

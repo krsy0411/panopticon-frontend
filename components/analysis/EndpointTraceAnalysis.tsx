@@ -5,7 +5,7 @@ import { IoClose } from 'react-icons/io5';
 import { useQuery } from '@tanstack/react-query';
 import { getEndpointTraces } from '@/src/api/apm';
 import { TraceStatusFilter, EndpointTraceItem } from '@/types/apm';
-import { useTimeRangeStore, POLLING_INTERVAL } from '@/src/store/timeRangeStore';
+import { useTimeRangeStore, POLLING_DETAIL_INTERVAL } from '@/src/store/timeRangeStore';
 import StateHandler from '@/components/ui/StateHandler';
 import Dropdown from '@/components/ui/Dropdown';
 import Pagination from '@/components/features/services/Pagination';
@@ -57,9 +57,9 @@ export default function EndpointTraceAnalysis({
         limit: 200,
       }),
     enabled: isOpen && !!serviceName && !!endpointName,
-    refetchInterval: POLLING_INTERVAL,
+    refetchInterval: POLLING_DETAIL_INTERVAL,
     refetchIntervalInBackground: true,
-    staleTime: POLLING_INTERVAL - 500, // 약간의 여유를 두고 stale 처리
+    staleTime: POLLING_DETAIL_INTERVAL - 500, // 약간의 여유를 두고 stale 처리
   });
 
   // sortOption에 따른 정렬

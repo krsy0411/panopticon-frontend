@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import Dropdown from '@/components/ui/Dropdown';
 import { useQuery } from '@tanstack/react-query';
 import { getServiceEndpoints } from '@/src/api/apm';
-import { useTimeRangeStore, POLLING_INTERVAL } from '@/src/store/timeRangeStore';
+import { useTimeRangeStore, POLLING_MAIN_INTERVAL } from '@/src/store/timeRangeStore';
 import { convertTimeRangeToParams } from '@/src/utils/timeRange';
 import StateHandler from '@/components/ui/StateHandler';
 import { EndpointSortBy } from '@/types/apm';
@@ -146,7 +146,7 @@ export default function ResourcesSection({ serviceName }: ResourcesSectionProps)
         sort_by: sortBy,
       });
     },
-    refetchInterval: POLLING_INTERVAL,
+    refetchInterval: POLLING_MAIN_INTERVAL,
     refetchIntervalInBackground: true, // 백그라운드에서도 갱신
     staleTime: 0, // 즉시 stale 상태로 만들어 항상 최신 데이터 요청
     retry: false,

@@ -181,7 +181,7 @@ OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%20${formValues.licenseKey}`;
               type="checkbox"
               checked={checkedItems[0] || false}
               onChange={(e) => setCheckedItems({ ...checkedItems, 0: e.target.checked })}
-              className="h-4 w-4 cursor-pointer"
+              className="h-4 w-4 cursor-pointer accent-green-800"
             />
             <span>위 단계별로 SDK를 설치했습니다</span>
           </li>
@@ -190,7 +190,7 @@ OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%20${formValues.licenseKey}`;
               type="checkbox"
               checked={checkedItems[1] || false}
               onChange={(e) => setCheckedItems({ ...checkedItems, 1: e.target.checked })}
-              className="h-4 w-4 cursor-pointer"
+              className="h-4 w-4 cursor-pointer accent-green-800"
             />
             <span>환경변수를 설정했습니다</span>
           </li>
@@ -199,7 +199,7 @@ OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%20${formValues.licenseKey}`;
               type="checkbox"
               checked={checkedItems[2] || false}
               onChange={(e) => setCheckedItems({ ...checkedItems, 2: e.target.checked })}
-              className="h-4 w-4 cursor-pointer"
+              className="h-4 w-4 cursor-pointer accent-green-800"
             />
             <span>애플리케이션을 재시작했습니다</span>
           </li>
@@ -250,14 +250,14 @@ function getInstrumentationLabel(method: string): string {
   return labels[method] || method;
 }
 
-// Node.js 환경별 설치 가이드 (@woongno/nestjs-monitoring-sdk)
+// Node.js 환경별 설치 가이드 (@panopticon/nestjs-monitoring-sdk)
 function getNodeJsGuides(baseEnv: string, formValues: AgentSetupFormValues): GuideStep[] {
-  const npmInstall = `npm install @woongno/nestjs-monitoring-sdk`;
+  const npmInstall = `npm install @panopticon/nestjs-monitoring-sdk`;
 
   const baseGuides: GuideStep[] = [
     {
       title: 'Step 1: NPM 패키지 설치',
-      description: 'Woongno 모니터링 SDK를 설치합니다.',
+      description: 'panopticon 모니터링 SDK를 설치합니다.',
       code: npmInstall,
       language: 'bash',
     },
@@ -266,9 +266,7 @@ function getNodeJsGuides(baseEnv: string, formValues: AgentSetupFormValues): Gui
       description:
         '애플리케이션의 main.ts 파일에서 MonitoringSDK를 초기화합니다. 수집하고 싶은 항목에 대해서만 true로 설정하세요.',
       code: `// main.ts
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { MonitoringSDK } from '@woongno/nestjs-monitoring-sdk';
+import { MonitoringSDK } from '@panopticon/nestjs-monitoring-sdk';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -276,7 +274,7 @@ async function bootstrap() {
   // SDK 초기화
   MonitoringSDK.init(app, {
     apiKey: '${formValues.licenseKey}',
-    endpoint: 'https://producer.woongno-monitoring.com',
+    endpoint: 'https://api.jungle-panopticon.cloud/producer',
     serviceName: '${formValues.serviceName}',
     environment: '${formValues.serviceEnvironment}',
     // 선택 설정 - 필요한 항목만 true로 설정
@@ -299,7 +297,7 @@ bootstrap();`,
       code: `// app.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { MonitoringSDK } from '@woongno/nestjs-monitoring-sdk';
+import { MonitoringSDK } from '@panopticon/nestjs-monitoring-sdk';
 
 @Module({
   imports: [
@@ -319,7 +317,7 @@ export class AppModule {}`,
     {
       title: 'Step 4: Trace Context 접근 (선택사항)',
       description: '비즈니스 로직에서 현재 Trace ID/Span ID를 접근합니다.',
-      code: `import { getCurrentTraceId, getCurrentSpanId } from '@woongno/nestjs-monitoring-sdk';
+      code: `import { getCurrentTraceId, getCurrentSpanId } from '@panopticon/nestjs-monitoring-sdk';
 
 export class UserService {
   async getUser(id: string) {
@@ -410,7 +408,7 @@ app = FastAPI()
 # SDK 초기화
 sdk = MonitoringSDK.init(app, {
     'api_key': '${formValues.licenseKey}',
-    'endpoint': 'https://producer.woongno-monitoring.com',
+    'endpoint': 'https://api.jungle-panopticon.cloud/producer',
     'service_name': '${formValues.serviceName}',
     'environment': '${formValues.serviceEnvironment}',
     # 선택 설정 - 필요한 항목만 True로 설정

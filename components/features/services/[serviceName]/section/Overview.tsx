@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import OverviewCharts from '@/components/features/services/[serviceName]/OverviewCharts';
 import { getServiceMetrics } from '@/src/api/apm';
-import { POLLING_INTERVAL, useTimeRangeStore } from '@/src/store/timeRangeStore';
+import { POLLING_MAIN_INTERVAL, useTimeRangeStore } from '@/src/store/timeRangeStore';
 import { convertTimeRangeToParams, getChartXAxisRange } from '@/src/utils/timeRange';
 import {
   getTimeAxisFormatter,
@@ -38,7 +38,7 @@ export default function OverviewSection({ serviceName }: OverviewSectionProps) {
         interval: interval,
       });
     },
-    refetchInterval: POLLING_INTERVAL,
+    refetchInterval: POLLING_MAIN_INTERVAL,
     refetchIntervalInBackground: true, // 백그라운드에서도 갱신
     staleTime: 0, // 즉시 stale 상태로 만들어 항상 최신 데이터 요청
   });
