@@ -23,8 +23,6 @@ docker compose up -d
 docker compose down
 ```
 
----
-
 ## 🔄 핫 리로드 (Hot Reload) 동작 원리
 
 ### 왜 Docker Compose를 사용하나?
@@ -47,22 +45,18 @@ docker compose down
 - 환경 설정을 코드로 관리 (일관성 유지)
 - 팀원들 간 개발환경 동일성 보장
 
----
-
 ## 📊 작동 방식
 
 ```
 호스트(MacOS/Linux)         Docker 컨테이너
 ┌─────────────────────┐    ┌──────────────────┐
-│ 로컬 소스코드      │───→ │ 마운트된 /app    │
-│ (실시간 변경)      │    │                  │
+│ 로컬 소스코드           │──→│ 마운트된 /app       │
+│ (실시간 변경)          │    │                  │
 └─────────────────────┘    │ Next.js Dev      │
-                           │ Server (핫 리로드)│
+                           │ Server (핫 리로드) │
                            └──────────────────┘
      파일 변경 감지           즉시 리빌드/새로고침
 ```
-
----
 
 ## 📁 docker-compose.yml 설정 상세
 
@@ -93,8 +87,6 @@ services:
 | `/app/node_modules`    | 호스트 node_modules 제외   | 네이티브 모듈 호환성 (ARM64 vs x86 등)  |
 | `3000:3000`            | Next.js dev 서버 포트 노출 | 브라우저에서 http://localhost:3000 접근 |
 | `NODE_ENV=development` | 개발 모드                  | Next.js 고속 리빌드, 소스맵 포함        |
-
----
 
 ## 🚀 실제 개발 워크플로우
 
@@ -132,8 +124,6 @@ export default function Page() {
 docker compose down
 ```
 
----
-
 ## ⚠️ 주의사항
 
 ### `docker compose up` 할 때
@@ -166,8 +156,6 @@ docker compose up --build
 docker compose down -v
 ```
 
----
-
 ## 🔧 문제 해결
 
 ### ❌ lightningcss 모듈 오류
@@ -189,8 +177,6 @@ docker compose down
 docker compose up --build
 ```
 
----
-
 ### ❌ 포트 3000이 이미 사용 중
 
 **해결책 1: 환경변수로 포트 변경**
@@ -206,8 +192,6 @@ ports:
   - '3001:3000' # 호스트 3001 → 컨테이너 3000
 ```
 
----
-
 ### ❌ 변경사항이 반영되지 않음
 
 **해결책:**
@@ -218,15 +202,11 @@ docker compose down -v
 docker compose up --build
 ```
 
----
-
 ## 📚 추가 참고
 
 - **Next.js 공식 문서**: https://nextjs.org/docs
 - **Docker 공식 문서**: https://docs.docker.com/
 - **API 서버**: NestJS (별도 저장소, localhost:3001로 운영)
-
----
 
 ## 💡 팁
 
@@ -260,7 +240,3 @@ docker compose logs -f
 # 컨테이너 로그만 보기
 docker compose logs frontend
 ```
-
----
-
-**마지막 업데이트**: 2025년 11월 9일
